@@ -5,8 +5,8 @@
     <title>Day X</title>
 
     <meta name="viewport" content="width=device-width, maximum-scale=1">
-    <meta name="theme-color" content="#85bb65">
-    <meta name="apple-mobile-web-app-status-bar-style" content="#85bb65">
+    <meta name="theme-color" content="#333">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#333">
     
     <style type="text/css">
         html, body {
@@ -18,10 +18,16 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            
+            background: #0f3854;
+            background: radial-gradient(ellipse at center,  #0a2e38  0%, #000000 70%);
+            background-size: 100%;
+
             font-size: 4vw;
+            font-family: 'Share Tech Mono', monospace;
+            
             color: #fff;
-            background-color: #f1f1f1;
-            text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb, 0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0, 0, 0, .1), 0 0 5px rgba(0, 0, 0, .1), 0 1px 3px rgba(0, 0, 0, .3), 0 3px 5px rgba(0, 0, 0, .2), 0 5px 10px rgba(0, 0, 0, .25), 0 10px 10px rgba(0, 0, 0, .2), 0 20px 20px rgba(0, 0, 0, .15);
+            text-shadow: 0 0 20px rgba(10, 175, 230, 1),  0 0 20px rgba(10, 175, 230, 0);
         }
 
         body > div {
@@ -46,7 +52,7 @@
         }
 
         .salary-date {
-            text-align: center;
+            margin-top: 30px;
         }
 
         .days,
@@ -55,7 +61,7 @@
         .secs {
             display: inline-block;
             text-align: center;
-            width: 8vw;
+            width: 12vw;
         }
 
         .days:after,
@@ -87,7 +93,7 @@
 
         .text.animate {
             opacity: 0;
-            transform: rotateY(180deg);
+            transform: rotateX(180deg);
         }
     </style>
 </head>
