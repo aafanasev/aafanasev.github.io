@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Day X</title>
+
+    <meta name="viewport" content="width=device-width, maximum-scale=1">
+    <meta name="theme-color" content="#85bb65">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#85bb65">
+    
+    <style type="text/css">
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 4vw;
+            color: #fff;
+            background-color: #f1f1f1;
+            text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb, 0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0, 0, 0, .1), 0 0 5px rgba(0, 0, 0, .1), 0 1px 3px rgba(0, 0, 0, .3), 0 3px 5px rgba(0, 0, 0, .2), 0 5px 10px rgba(0, 0, 0, .25), 0 10px 10px rgba(0, 0, 0, .2), 0 20px 20px rgba(0, 0, 0, .15);
+        }
+
+        body > div {
+            margin: 1%;
+        }
+
+        @media only screen and (max-device-width: 480px) {
+            body {
+                font-size: 5vw;
+            }
+
+            body > div {
+                margin: 3%;
+            }
+
+            body .days,
+            body .hours,
+            body .mins,
+            body .secs {
+                width: 15vw;
+            }
+        }
+
+        .salary-date {
+            text-align: center;
+        }
+
+        .days,
+        .hours,
+        .mins,
+        .secs {
+            display: inline-block;
+            text-align: center;
+            width: 8vw;
+        }
+
+        .days:after,
+        .hours:after,
+        .mins:after,
+        .secs:after {
+            display: block;
+        }
+
+        .days:after {
+            content: "days";
+        }
+
+        .hours:after {
+            content: "hours";
+        }
+
+        .mins:after {
+            content: "mins";
+        }
+
+        .secs:after {
+            content: "secs";
+        }
+
+        .text {
+            transition: all 150ms;
+        }
+
+        .text.animate {
+            opacity: 0;
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bonus-date"></div>
+    <div class="bonus">
+        <div class="days">
+            <div class="text"></div>
+        </div>
+        <div class="hours">
+            <div class="text"></div>
+        </div>
+        <div class="mins">
+            <div class="text"></div>
+        </div>
+        <div class="secs">
+            <div class="text"></div>
+        </div>
+    </div>
+
+    <div class="salary-date"></div>
+    <div class="salary">
+        <div class="days">
+            <div class="text"></div>
+        </div>
+        <div class="hours">
+            <div class="text"></div>
+        </div>
+        <div class="mins">
+            <div class="text"></div>
+        </div>
+        <div class="secs">
+            <div class="text"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+
+        // copy-paste of agodazen.date
+
+        const updateView = (element, value) => {
+            element.classList.add('animate');
+            setTimeout(() => element.innerText = value, 160);
+            setTimeout(() => element.classList.remove('animate'), 200);
+        };
+
+        const numberToString = (num) => {
+            const result = Math.floor(num).toString();
+            if (result.length < 2) return `0${result}`;
+            return result;
+        }
+
+        const calculateReminded = (date) => {
+            const days = date % 86400000;
+            const hours = days % 3600000;
+            const mins = hours % 60000;
+            return {
+                d: numberToString(date / 86400000),
+                h: numberToString(days / 3600000),
+                m: numberToString(hours / 60000),
+                s: numberToString(mins / 1000)
+            };
+        };
+
+        const counter = (elements, targetDate) => {
+            const previous = { d: 0, h: 0, m: 0, s: 0 };
+            const u = () => {
+                const remind = calculateReminded(targetDate - new Date());
+                for (let key in elements) {
+                    if (previous[key] !== remind[key]) {
+                        updateView(elements[key], remind[key]);
+                        previous[key] = remind[key];
+                    }
+                }
+            };
+            u();
+            return setInterval(u, 1000);
+        }
+
+        const getElments = (parentClass) => {
+            return {
+                d: document.querySelectorAll('.' + parentClass + ' .days .text')[0],
+                h: document.querySelectorAll('.' + parentClass + ' .hours .text')[0],
+                m: document.querySelectorAll('.' + parentClass + ' .mins .text')[0],
+                s: document.querySelectorAll('.' + parentClass + ' .secs .text')[0],
+            };
+        }
+
+        const getNextSalary = (date = new Date) => {
+            const calculate = (year, month) => {
+                const target = new Date(year, month + 1, 1, 8);
+                target.setDate(target.getDate() - 2);
+                return target;
+            }
+
+            currentYear = date.getFullYear();
+            currentMonth = date.getMonth();
+
+            let target = calculate(currentYear, currentMonth);
+            if (target < date) {
+                target = calculate(currentYear, currentMonth + 1);
+            }
+            switch (target.getDay()) {
+                case 0:
+                    target.setDate(target.getDate() - 2);
+                    break;
+                case 6:
+                    target.setDate(target.getDate() - 1);
+                    break;
+                default: break;
+            }
+            return target;
+        }
+
+        const showDate = (selector, date) => {
+            const element = document.querySelectorAll(selector)[0];
+            element.innerText = new Date(date).toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour12: false });
+        }
+
+        const salaryDate = getNextSalary();
+        const bonusDate = Date.parse("Fri Mar 29 2019 08:00:00 GMT+0700");
+
+        const bonusCounter = counter(getElments('bonus'), bonusDate);
+        const salaryCounter = counter(getElments('salary'), salaryDate);
+
+        showDate('.bonus-date', bonusDate);
+        showDate('.salary-date', salaryDate);
+
+    </script>
+
+</body>
+
+</html>
