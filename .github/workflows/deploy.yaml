@@ -22,7 +22,7 @@ jobs:
           bundle install
           bundle exec jekyll build
       - name: Move build output to root dir
-        run: mv ./_jekyll/_site/* ./
+        run: mv -f ./_jekyll/_site/* ./
       - uses: peter-evans/create-pull-request@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }} 
