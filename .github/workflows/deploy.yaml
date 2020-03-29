@@ -18,12 +18,11 @@ jobs:
       - name: Run jekyll build
         run: |
           cd _jekyll
-          pwd
           gem install bundler
           bundle install
           bundle exec jekyll build
       - name: Move build output to root dir
-        run: mv ./_site/* ../
+        run: mv ./_jekyll/_site/* ../
       - uses: peter-evans/create-pull-request@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }} 
