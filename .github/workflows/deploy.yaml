@@ -12,12 +12,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: cd _jekyll
       - uses: actions/setup-ruby@v1
         with:
           ruby-version: 2.7
       - name: Run jekyll build
         run: |
+          cd _jekyll
+          pwd
           gem install bundler
           bundle install
           bundle exec jekyll build
