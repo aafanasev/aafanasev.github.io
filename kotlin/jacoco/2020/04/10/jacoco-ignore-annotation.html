@@ -1,79 +1,68 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  
-  <title>Filter out classes from JaCoCo report using annotaitons | afanasev.net</title>
-
-<meta property="og:title" content="Filter out classes from JaCoCo report using annotaitons" />
-<meta name="author" content="Anatolii Afanasev" />
-<meta property="og:locale" content="en_US" />
-<link rel="canonical" href="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" />
-<meta property="og:url" content="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" />
-<meta property="og:site_name" content="afanasev.net" />
-<meta property="og:type" content="article" />
-<meta property="article:published_time" content="2020-04-10T09:26:00+00:00" />
-<script type="application/ld+json">
-{"@type":"BlogPosting","headline":"Filter out classes from JaCoCo report using annotaitons","dateModified":"2020-04-10T09:26:00+00:00","datePublished":"2020-04-10T09:26:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html"},"author":{"@type":"Person","name":"Anatolii Afanasev"},"url":"https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html","@context":"https://schema.org"}</script>
-  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://afanasev.net/feed.xml" title="afanasev.net" /><!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=UA-60387111-7"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-60387111-7');
-</script>
-</head>
-<body><header class="site-header" role="banner">
-
-  <div class="wrapper"><a class="site-title" rel="author" href="/">afanasev.net</a><nav class="site-nav">
-        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
-        <label for="nav-trigger">
-          <span class="menu-icon">
-            <svg viewBox="0 0 18 15" width="18px" height="15px">
-              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
-            </svg>
-          </span>
-        </label>
-
-        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
-      </nav></div>
-</header>
-<main class="page-content" aria-label="Content">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Filter out classes from JaCoCo report using annotaitons | afanasev.net</title>
+    <meta property="og:title" content="Filter out classes from JaCoCo report using annotaitons" />
+    <meta name="author" content="Anatolii Afanasev" />
+    <meta property="og:locale" content="en_US" />
+    <link rel="canonical" href="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" />
+    <meta property="og:url" content="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" />
+    <meta property="og:site_name" content="afanasev.net" />
+    <meta property="og:type" content="article" />
+    <meta property="article:published_time" content="2020-04-10T09:26:00+00:00" />
+    <script type="application/ld+json">
+      {"@type":"BlogPosting","headline":"Filter out classes from JaCoCo report using annotaitons","dateModified":"2020-04-10T09:26:00+00:00","datePublished":"2020-04-10T09:26:00+00:00","mainEntityOfPage":{"@type":"WebPage","@id":"https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html"},"author":{"@type":"Person","name":"Anatolii Afanasev"},"url":"https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html","@context":"https://schema.org"}
+    </script>
+    <link rel="stylesheet" href="/assets/main.css">
+    <link type="application/atom+xml" rel="alternate" href="https://afanasev.net/feed.xml" title="afanasev.net" />
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-60387111-7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      gtag('config', 'UA-60387111-7');
+    </script>
+  </head>
+  <body>
+    <header class="site-header" role="banner">
+      <div class="wrapper"><a class="site-title" rel="author" href="/">afanasev.net</a><nav class="site-nav">
+          <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+          <label for="nav-trigger">
+            <span class="menu-icon">
+              <svg viewBox="0 0 18 15" width="18px" height="15px">
+                <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+              </svg>
+            </span>
+          </label>
+          <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+        </nav></div>
+    </header>
+    <main class="page-content" aria-label="Content">
       <div class="wrapper">
         <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
-
-  <header class="post-header">
-    <h1 class="post-title p-name" itemprop="name headline">Filter out classes from JaCoCo report using annotaitons</h1>
-    <p class="post-meta">
-      <time class="dt-published" datetime="2020-04-10T09:26:00+00:00" itemprop="datePublished">Apr 10, 2020
-      </time></p>
-  </header>
-
-  <div class="post-content e-content" itemprop="articleBody">
-    <p style="text-align: center;"><img src="/assets/img/jacoco-code-coverage.png" alt="JaCoCo code coverate report with Generated annotation" /></p>
-
-<h2 id="story">Story</h2>
-
-<p>(can be skipped)</p>
-
-<p>Long time ago in our company, we decided to use code coverage level as one of the must requirements to merge PR into <code class="highlighter-rouge">develop</code> branch. We have automated merge bot which automatically merges if the branch meets all requirements. We came up with magic number <code class="highlighter-rouge">80%</code>, so every new/modified class must be covered by Unit tests as minimum 80%.</p>
-
-<p><em>There are many discussions about code coverage, 80%, JaCoCo, etc. This article is not about that.</em></p>
-
-<p>We were happy with this requirement. Teams started to write more testable code, think about architecture, app stability went up, etc. We understood it’s impossible to cover all classes in our project, there are many reasons: legacy code (lots of LOC need to be refactored; Business just won’t give time for that; “if it works don’t touch!”), auto-generated code (why we need to test 3rd party libs, etc), some code frankly does not need to be tested. Therefore, we need a way to filter out specific classes from JaCoCo report and allow devs/tools to merge branches.</p>
-
-<p>Even more problems started to appear after moving to Kotlin from Java. JaCoCo, as you may know, works as java-agent with java bytecode only. Kotlin is a great language which reduced boilerplate code a lot but underhood the hood (in case of JVM) it generates a lot of helper methods, lines of code. For example, data class becomes a class with auto-generated methods such as <code class="highlighter-rouge">equals</code>, <code class="highlighter-rouge">hashCode</code>, <code class="highlighter-rouge">component1</code>, etc; even one line of code like <code class="highlighter-rouge">s?.foo()</code> or just <code class="highlighter-rouge">s.foo()</code> (where <code class="highlighter-rouge">s</code> defined as <code class="highlighter-rouge">lateinit</code>) will have 1 <code class="highlighter-rouge">if</code> in the generated code. Obviuosly, we do not have to test the generated code. All this generated stuff dramatically decreased our code coverage numbers. Keep in mind, those numbers can be KPI for some teams (yeah, bloody enterprise…).</p>
-
-<h2 id="ideas">Ideas</h2>
-
-<h4 id="1-custom-gradle-task-with-filter">1. Custom Gradle task with filter</h4>
-
-<p>This way is suitable for most teams. Create a task using <code class="highlighter-rouge">JacocoReport</code> and make it depend on <code class="highlighter-rouge">test</code> &amp; <code class="highlighter-rouge">generate report</code> tasks. Then define an array of classes that you want to ignore and pass it as <code class="highlighter-rouge">excludes</code> parameter of <code class="highlighter-rouge">fileTree</code> method.</p>
-
-<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">task</span> <span class="nf">jacocoTestReport</span><span class="o">(</span><span class="nl">type:</span> <span class="n">JacocoReport</span><span class="o">,</span> <span class="nl">dependsOn:</span> <span class="o">[...])</span> <span class="o">{</span>
+          <header class="post-header">
+            <h1 class="post-title p-name" itemprop="name headline">Filter out classes from JaCoCo report using annotaitons</h1>
+            <p class="post-meta">
+              <time class="dt-published" datetime="2020-04-10T09:26:00+00:00" itemprop="datePublished">Apr 10, 2020
+              </time></p>
+          </header>
+          <div class="post-content e-content" itemprop="articleBody">
+            <p style="text-align: center;"><img src="/assets/img/jacoco-code-coverage.png" alt="JaCoCo code coverate report with Generated annotation" /></p>
+            <h2 id="story">Story</h2>
+            <p>(can be skipped)</p>
+            <p>Long time ago in our company, we decided to use code coverage level as one of the must requirements to merge PR into <code class="highlighter-rouge">develop</code> branch. We have automated merge bot which automatically merges if the branch meets all requirements. We came up with magic number <code class="highlighter-rouge">80%</code>, so every new/modified class must be covered by Unit tests as minimum 80%.</p>
+            <p><em>There are many discussions about code coverage, 80%, JaCoCo, etc. This article is not about that.</em></p>
+            <p>We were happy with this requirement. Teams started to write more testable code, think about architecture, app stability went up, etc. We understood it’s impossible to cover all classes in our project, there are many reasons: legacy code (lots of LOC need to be refactored; Business just won’t give time for that; “if it works don’t touch!”), auto-generated code (why we need to test 3rd party libs, etc), some code frankly does not need to be tested. Therefore, we need a way to filter out specific classes from JaCoCo report and allow devs/tools to merge branches.</p>
+            <p>Even more problems started to appear after moving to Kotlin from Java. JaCoCo, as you may know, works as java-agent with java bytecode only. Kotlin is a great language which reduced boilerplate code a lot but underhood the hood (in case of JVM) it generates a lot of helper methods, lines of code. For example, data class becomes a class with auto-generated methods such as <code class="highlighter-rouge">equals</code>, <code class="highlighter-rouge">hashCode</code>, <code class="highlighter-rouge">component1</code>, etc; even one line of code like <code class="highlighter-rouge">s?.foo()</code> or just <code class="highlighter-rouge">s.foo()</code> (where <code class="highlighter-rouge">s</code> defined as <code class="highlighter-rouge">lateinit</code>) will have 1 <code class="highlighter-rouge">if</code> in the generated code. Obviuosly, we do not have to test the generated code. All this generated stuff dramatically decreased our code coverage numbers. Keep in mind, those numbers can be KPI for some teams (yeah, bloody enterprise…).</p>
+            <h2 id="ideas">Ideas</h2>
+            <h4 id="1-custom-gradle-task-with-filter">1. Custom Gradle task with filter</h4>
+            <p>This way is suitable for most teams. Create a task using <code class="highlighter-rouge">JacocoReport</code> and make it depend on <code class="highlighter-rouge">test</code> &amp; <code class="highlighter-rouge">generate report</code> tasks. Then define an array of classes that you want to ignore and pass it as <code class="highlighter-rouge">excludes</code> parameter of <code class="highlighter-rouge">fileTree</code> method.</p>
+            <div class="language-groovy highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code><span class="n">task</span> <span class="nf">jacocoTestReport</span><span class="o">(</span><span class="nl">type:</span> <span class="n">JacocoReport</span><span class="o">,</span> <span class="nl">dependsOn:</span> <span class="o">[...])</span> <span class="o">{</span>
     <span class="c1">// filter rules</span>
     <span class="kt">def</span> <span class="n">fileFilter</span> <span class="o">=</span> <span class="o">[</span>
         <span class="s1">'**/R.class'</span><span class="o">,</span>
@@ -89,46 +78,37 @@
 
     <span class="c1">// some code...</span>
 <span class="o">}</span>
-</code></pre></div></div>
-
-<p>Pros:</p>
-<ul>
-  <li>All ignored classes in 1 place</li>
-</ul>
-
-<p>Cons:</p>
-<ul>
-  <li>Easy to make a mistake. One day we have found a rule <code class="highlighter-rouge">**/R*.class</code> which supposed to filter out <code class="highlighter-rouge">R</code> class &amp; nested classes (known by every Android developer) but JaCoCo was ignoring all classes started with <code class="highlighter-rouge">R</code> :)</li>
-</ul>
-
-<h4 id="2-annotation-processor">2. Annotation processor</h4>
-
-<p>Since all developers are lazy and we rather spend 1 day on automating routine job, my colleague came up with Annotation processor approach. He has created <code class="highlighter-rouge">NoCoverage</code> annotation and a processor which saves all annotated classes into a file. Later on the file was used by <code class="highlighter-rouge">jacocoTestReport</code> instead of <code class="highlighter-rouge">fileFilter</code> array. Genius!</p>
-
-<p>Pros:</p>
-<ul>
-  <li>Automation!</li>
-  <li>Less manual work</li>
-</ul>
-
-<p>Cons:</p>
-<ul>
-  <li>APT is not suitable for this kind of jobs. Especially, if it doesn’t support incremental processing and you have many modules.</li>
-</ul>
-
-<h4 id="3-forked-kotlin-compiler">3. Forked Kotlin compiler</h4>
-
-<p>We found out that JaCoCo team in order to support Lombok added a filter which doesn’t count coverage of <code class="highlighter-rouge">@Generated</code> annotated classes/methods. Without thinking twice, another colleague has forked Kotlin compiler (!) and modified so it started adding <code class="highlighter-rouge">Generated</code> annotation to every generated method. Of course, we haven’t used this approach in prod code. Later, JaCoCo added <code class="highlighter-rouge">@kotlin.Metadata</code> filter too.</p>
-
-<p>… and finally!</p>
-
-<h2 id="solution-annotation--kotlin-typealias">Solution: Annotation + Kotlin typealias</h2>
-
-<p>While investigating JaCoCo code I found that they changed <code class="highlighter-rouge">AnnotationGeneratedFilter</code> behaviour. Now instead of checking exact match of annotation name it just should <a href="https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51">contain</a> <code class="highlighter-rouge">Generated</code> word. It means we can create any annotation with proper name and JaCoCo will automatically ignore all annotated classes and methods.</p>
-
-<p>In case of Kotlin you can use <code class="highlighter-rouge">typealias</code> to make your code more readable:</p>
-
-<div class="language-kotlin highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@Retention</span><span class="p">(</span><span class="nc">AnnotationRetention</span><span class="p">.</span><span class="nc">BINARY</span><span class="p">)</span>
+</code></pre>
+              </div>
+            </div>
+            <p>Pros:</p>
+            <ul>
+              <li>All ignored classes in 1 place</li>
+            </ul>
+            <p>Cons:</p>
+            <ul>
+              <li>Easy to make a mistake. One day we have found a rule <code class="highlighter-rouge">**/R*.class</code> which supposed to filter out <code class="highlighter-rouge">R</code> class &amp; nested classes (known by every Android developer) but JaCoCo was ignoring all classes started with <code class="highlighter-rouge">R</code> :)</li>
+            </ul>
+            <h4 id="2-annotation-processor">2. Annotation processor</h4>
+            <p>Since all developers are lazy and we rather spend 1 day on automating routine job, my colleague came up with Annotation processor approach. He has created <code class="highlighter-rouge">NoCoverage</code> annotation and a processor which saves all annotated classes into a file. Later on the file was used by <code class="highlighter-rouge">jacocoTestReport</code> instead of <code class="highlighter-rouge">fileFilter</code> array. Genius!</p>
+            <p>Pros:</p>
+            <ul>
+              <li>Automation!</li>
+              <li>Less manual work</li>
+            </ul>
+            <p>Cons:</p>
+            <ul>
+              <li>APT is not suitable for this kind of jobs. Especially, if it doesn’t support incremental processing and you have many modules.</li>
+            </ul>
+            <h4 id="3-forked-kotlin-compiler">3. Forked Kotlin compiler</h4>
+            <p>We found out that JaCoCo team in order to support Lombok added a filter which doesn’t count coverage of <code class="highlighter-rouge">@Generated</code> annotated classes/methods. Without thinking twice, another colleague has forked Kotlin compiler (!) and modified so it started adding <code class="highlighter-rouge">Generated</code> annotation to every generated method. Of course, we haven’t used this approach in prod code. Later, JaCoCo added <code class="highlighter-rouge">@kotlin.Metadata</code> filter too.</p>
+            <p>… and finally!</p>
+            <h2 id="solution-annotation--kotlin-typealias">Solution: Annotation + Kotlin typealias</h2>
+            <p>While investigating JaCoCo code I found that they changed <code class="highlighter-rouge">AnnotationGeneratedFilter</code> behaviour. Now instead of checking exact match of annotation name it just should <a href="https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51">contain</a> <code class="highlighter-rouge">Generated</code> word. It means we can create any annotation with proper name and JaCoCo will automatically ignore all annotated classes and methods.</p>
+            <p>In case of Kotlin you can use <code class="highlighter-rouge">typealias</code> to make your code more readable:</p>
+            <div class="language-kotlin highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code><span class="nd">@Retention</span><span class="p">(</span><span class="nc">AnnotationRetention</span><span class="p">.</span><span class="nc">BINARY</span><span class="p">)</span>
 <span class="k">annotation</span> <span class="kd">class</span> <span class="nc">NoCoverageGenerated</span>
 
 <span class="k">typealias</span> <span class="nc">NoCoverage</span> <span class="p">=</span> <span class="nc">NoCoverageGenerated</span>
@@ -136,68 +116,67 @@
 <span class="c1">// or just</span>
 
 <span class="k">typealias</span> <span class="nc">NoCoverage</span> <span class="p">=</span> <span class="nc">Generated</span> <span class="c1">// from javax.annotations package</span>
-</code></pre></div></div>
-
-<p>Pros:</p>
-<ul>
-  <li>Easy to use</li>
-  <li>No code generation</li>
-</ul>
-
-<p>Cons:</p>
-<ul>
-  <li>Workaround. From JaCoCo Wiki:
-    <blockquote>
-      <p>Remark: A Generated annotation should only be used for code actually generated by compilers or tools, never for manual exclusion.</p>
-    </blockquote>
-  </li>
-  <li>Useless annotation in prod code. But if you use code obfuscator such as Proguard/Dexguard/R8 (Android) that annotation will be cut out.</li>
-</ul>
-
-  </div><div id="disqus_thread"></div>
-  <script>
-    var disqus_config = function () {
-      this.page.url = 'https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html';
-      this.page.identifier = 'https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html';
-    };
-
-    (function() {
-      var d = document, s = d.createElement('script');
-
-      s.src = 'https://afanasev-net.disqus.com/embed.js';
-
-      s.setAttribute('data-timestamp', +new Date());
-      (d.head || d.body).appendChild(s);
-    })();
-  </script>
-  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript><a class="u-url" href="/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" hidden></a>
-</article>
-
+</code></pre>
+              </div>
+            </div>
+            <p>Pros:</p>
+            <ul>
+              <li>Easy to use</li>
+              <li>No code generation</li>
+            </ul>
+            <p>Cons:</p>
+            <ul>
+              <li>Workaround. From JaCoCo Wiki:
+                <blockquote>
+                  <p>Remark: A Generated annotation should only be used for code actually generated by compilers or tools, never for manual exclusion.</p>
+                </blockquote>
+              </li>
+              <li>Useless annotation in prod code. But if you use code obfuscator such as Proguard/Dexguard/R8 (Android) that annotation will be cut out.</li>
+            </ul>
+          </div>
+          <div id="disqus_thread"></div>
+          <script>
+            var disqus_config = function () {
+              this.page.url = 'https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html';
+              this.page.identifier = 'https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html';
+            };
+            
+            (function() {
+              var d = document, s = d.createElement('script');
+            
+              s.src = 'https://afanasev-net.disqus.com/embed.js';
+            
+              s.setAttribute('data-timestamp', +new Date());
+              (d.head || d.body).appendChild(s);
+            })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+          <a class="u-url" href="/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" hidden></a>
+        </article>
       </div>
-    </main><footer class="site-footer h-card">
-  <data class="u-url" href="/"></data>
-
-  <div class="wrapper">
-
-    <h2 class="footer-heading">afanasev.net</h2>
-
-    <div class="footer-col-wrapper">
-      <div class="footer-col footer-col-1">
-        <ul class="contact-list">
-          <li class="p-name">Anatolii Afanasev</li><li><a class="u-email" href="mailto:tafanasyev@gmail.com">tafanasyev@gmail.com</a></li></ul>
+    </main>
+    <footer class="site-footer h-card">
+      <data class="u-url" href="/"></data>
+      <div class="wrapper">
+        <h2 class="footer-heading">afanasev.net</h2>
+        <div class="footer-col-wrapper">
+          <div class="footer-col footer-col-1">
+            <ul class="contact-list">
+              <li class="p-name">Anatolii Afanasev</li>
+              <li><a class="u-email" href="mailto:tafanasyev@gmail.com">tafanasyev@gmail.com</a></li>
+            </ul>
+          </div>
+          <div class="footer-col footer-col-2">
+            <ul class="social-media-list">
+              <li><a href="https://github.com/aafanasev"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">aafanasev</span></a></li>
+              <li><a href="https://www.linkedin.com/in/aafanasev"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">aafanasev</span></a></li>
+            </ul>
+          </div>
+          <div class="footer-col footer-col-3">
+            <p></p>
+          </div>
+        </div>
       </div>
-
-      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/aafanasev"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">aafanasev</span></a></li><li><a href="https://www.linkedin.com/in/aafanasev"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">aafanasev</span></a></li></ul>
-</div>
-
-      <div class="footer-col footer-col-3">
-        <p></p>
-      </div>
-    </div>
-
-  </div>
-
-</footer>
-</body>
-
+    </footer>
+  </body>
 </html>
