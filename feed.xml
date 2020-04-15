@@ -1,178 +1,121 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.0.0">Jekyll</generator><link href="https://afanasev.net/feed.xml" rel="self" type="application/atom+xml" /><link href="https://afanasev.net/" rel="alternate" type="text/html" /><updated>2020-04-10T19:00:23+00:00</updated><id>https://afanasev.net/feed.xml</id><title type="html">afanasev.net</title><author><name>Anatolii Afanasev</name></author><entry><title type="html">Filter out classes from JaCoCo report using annotaitons</title><link href="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" rel="alternate" type="text/html" title="Filter out classes from JaCoCo report using annotaitons" /><published>2020-04-10T09:26:00+00:00</published><updated>2020-04-10T09:26:00+00:00</updated><id>https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation</id><content type="html" xml:base="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html">&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;/assets/img/jacoco-code-coverage.png&quot; alt=&quot;JaCoCo code coverate report with Generated annotation&quot; /&gt;&lt;/p&gt;
-
-&lt;h2 id=&quot;story&quot;&gt;Story&lt;/h2&gt;
-
-&lt;p&gt;(can be skipped)&lt;/p&gt;
-
-&lt;p&gt;Long time ago in our company, we decided to use code coverage level as one of the must requirements to merge PR into &lt;code class=&quot;highlighter-rouge&quot;&gt;develop&lt;/code&gt; branch. We have automated merge bot which automatically merges if the branch meets all requirements. We came up with magic number &lt;code class=&quot;highlighter-rouge&quot;&gt;80%&lt;/code&gt;, so every new/modified class must be covered by Unit tests as minimum 80%.&lt;/p&gt;
-
-&lt;p&gt;&lt;em&gt;There are many discussions about code coverage, 80%, JaCoCo, etc. This article is not about that.&lt;/em&gt;&lt;/p&gt;
-
-&lt;p&gt;We were happy with this requirement. Teams started to write more testable code, think about architecture, app stability went up, etc. We understood it’s impossible to cover all classes in our project, there are many reasons: legacy code (lots of LOC need to be refactored; Business just won’t give time for that; “if it works don’t touch!”), auto-generated code (why we need to test 3rd party libs, etc), some code frankly does not need to be tested. Therefore, we need a way to filter out specific classes from JaCoCo report and allow devs/tools to merge branches.&lt;/p&gt;
-
-&lt;p&gt;Even more problems started to appear after moving to Kotlin from Java. JaCoCo, as you may know, works as java-agent with java bytecode only. Kotlin is a great language which reduced boilerplate code a lot but underhood the hood (in case of JVM) it generates a lot of helper methods, lines of code. For example, data class becomes a class with auto-generated methods such as &lt;code class=&quot;highlighter-rouge&quot;&gt;equals&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;hashCode&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;component1&lt;/code&gt;, etc; even one line of code like &lt;code class=&quot;highlighter-rouge&quot;&gt;s?.foo()&lt;/code&gt; or just &lt;code class=&quot;highlighter-rouge&quot;&gt;s.foo()&lt;/code&gt; (where &lt;code class=&quot;highlighter-rouge&quot;&gt;s&lt;/code&gt; defined as &lt;code class=&quot;highlighter-rouge&quot;&gt;lateinit&lt;/code&gt;) will have 1 &lt;code class=&quot;highlighter-rouge&quot;&gt;if&lt;/code&gt; in the generated code. Obviuosly, we do not have to test the generated code. All this generated stuff dramatically decreased our code coverage numbers. Keep in mind, those numbers can be KPI for some teams (yeah, bloody enterprise…).&lt;/p&gt;
-
-&lt;h2 id=&quot;ideas&quot;&gt;Ideas&lt;/h2&gt;
-
-&lt;h4 id=&quot;1-custom-gradle-task-with-filter&quot;&gt;1. Custom Gradle task with filter&lt;/h4&gt;
-
-&lt;p&gt;This way is suitable for most teams. Create a task using &lt;code class=&quot;highlighter-rouge&quot;&gt;JacocoReport&lt;/code&gt; and make it depend on &lt;code class=&quot;highlighter-rouge&quot;&gt;test&lt;/code&gt; &amp;amp; &lt;code class=&quot;highlighter-rouge&quot;&gt;generate report&lt;/code&gt; tasks. Then define an array of classes that you want to ignore and pass it as &lt;code class=&quot;highlighter-rouge&quot;&gt;excludes&lt;/code&gt; parameter of &lt;code class=&quot;highlighter-rouge&quot;&gt;fileTree&lt;/code&gt; method.&lt;/p&gt;
-
-&lt;div class=&quot;language-groovy highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;jacocoTestReport&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;type:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;JacocoReport&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nl&quot;&gt;dependsOn:&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[...])&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;c1&quot;&gt;// filter rules&lt;/span&gt;
-    &lt;span class=&quot;kt&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fileFilter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.0.0">Jekyll</generator><link href="https://afanasev.net/feed.xml" rel="self" type="application/atom+xml" /><link href="https://afanasev.net/" rel="alternate" type="text/html" /><updated>2020-04-15T15:27:39+00:00</updated><id>https://afanasev.net/feed.xml</id><title type="html">afanasev.net</title><author><name>Anatolii Afanasev</name></author><entry><title type="html">Filter out classes from JaCoCo report using annotaitons</title><link href="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" rel="alternate" type="text/html" title="Filter out classes from JaCoCo report using annotaitons" /><published>2020-04-10T09:26:00+00:00</published><updated>2020-04-10T09:26:00+00:00</updated><id>https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation</id><content type="html" xml:base="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html">&lt;p style=&quot;text-align: center;&quot;&gt;&lt;img src=&quot;/assets/img/jacoco-code-coverage.png&quot; alt=&quot;JaCoCo code coverate report with Generated annotation&quot; /&gt;&lt;/p&gt;
+        &lt;h2 id=&quot;story&quot;&gt;Story&lt;/h2&gt;
+        &lt;p&gt;(can be skipped)&lt;/p&gt;
+        &lt;p&gt;Long time ago in our company, we decided to use code coverage level as one of the must requirements to merge PR into &lt;code class=&quot;highlighter-rouge&quot;&gt;develop&lt;/code&gt; branch. We have automated merge bot which automatically merges if the branch meets all requirements. We came up with magic number &lt;code class=&quot;highlighter-rouge&quot;&gt;80%&lt;/code&gt;, so every new/modified class must be covered by Unit tests as minimum 80%.&lt;/p&gt;
+        &lt;p&gt;&lt;em&gt;There are many discussions about code coverage, 80%, JaCoCo, etc. This article is not about that.&lt;/em&gt;&lt;/p&gt;
+        &lt;p&gt;We were happy with this requirement. Teams started to write more testable code, think about architecture, app stability went up, etc. We understood it’s impossible to cover all classes in our project, there are many reasons: legacy code (lots of LOC need to be refactored; Business just won’t give time for that; “if it works don’t touch!”), auto-generated code (why we need to test 3rd party libs, etc), some code frankly does not need to be tested. Therefore, we need a way to filter out specific classes from JaCoCo report and allow devs/tools to merge branches.&lt;/p&gt;
+        &lt;p&gt;Even more problems started to appear after moving to Kotlin from Java. JaCoCo, as you may know, works as java-agent with java bytecode only. Kotlin is a great language which reduced boilerplate code a lot but underhood the hood (in case of JVM) it generates a lot of helper methods, lines of code. For example, data class becomes a class with auto-generated methods such as &lt;code class=&quot;highlighter-rouge&quot;&gt;equals&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;hashCode&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;component1&lt;/code&gt;, etc; even one line of code like &lt;code class=&quot;highlighter-rouge&quot;&gt;s?.foo()&lt;/code&gt; or just &lt;code class=&quot;highlighter-rouge&quot;&gt;s.foo()&lt;/code&gt; (where &lt;code class=&quot;highlighter-rouge&quot;&gt;s&lt;/code&gt; defined as &lt;code class=&quot;highlighter-rouge&quot;&gt;lateinit&lt;/code&gt;) will have 1 &lt;code class=&quot;highlighter-rouge&quot;&gt;if&lt;/code&gt; in the generated code. Obviuosly, we do not have to test the generated code. All this generated stuff dramatically decreased our code coverage numbers. Keep in mind, those numbers can be KPI for some teams (yeah, bloody enterprise…).&lt;/p&gt;
+        &lt;h2 id=&quot;ideas&quot;&gt;Ideas&lt;/h2&gt;
+        &lt;h4 id=&quot;1-custom-gradle-task-with-filter&quot;&gt;1. Custom Gradle task with filter&lt;/h4&gt;
+        &lt;p&gt;This way is suitable for most teams. Create a task using &lt;code class=&quot;highlighter-rouge&quot;&gt;JacocoReport&lt;/code&gt; and make it depend on &lt;code class=&quot;highlighter-rouge&quot;&gt;test&lt;/code&gt; &amp;amp; &lt;code class=&quot;highlighter-rouge&quot;&gt;generate report&lt;/code&gt; tasks. Then define an array of classes that you want to ignore and pass it as &lt;code class=&quot;highlighter-rouge&quot;&gt;excludes&lt;/code&gt; parameter of &lt;code class=&quot;highlighter-rouge&quot;&gt;fileTree&lt;/code&gt; method.&lt;/p&gt;
+        &lt;div class=&quot;language-groovy highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;task&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;jacocoTestReport&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nl&quot;&gt;type:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;JacocoReport&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nl&quot;&gt;dependsOn:&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[...])&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// filter rules&lt;/span&gt;
+        &lt;span class=&quot;kt&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fileFilter&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;
         &lt;span class=&quot;s1&quot;&gt;'**/R.class'&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
         &lt;span class=&quot;s1&quot;&gt;'**/R$*.class'&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
-
-    &lt;span class=&quot;kt&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;debugTree&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fileTree&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+        &lt;span class=&quot;kt&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;debugTree&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fileTree&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;
         &lt;span class=&quot;nl&quot;&gt;dir:&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;${buildDir}/intermediates/classes/debug&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; 
         &lt;span class=&quot;nl&quot;&gt;excludes:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;fileFilter&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// &amp;lt;-- exclude listed classes&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
-
-    &lt;span class=&quot;n&quot;&gt;classDirectories&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;files&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;debugTree&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt;
-
-    &lt;span class=&quot;c1&quot;&gt;// some code...&lt;/span&gt;
-&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;Pros:&lt;/p&gt;
-&lt;ul&gt;
-  &lt;li&gt;All ignored classes in 1 place&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Cons:&lt;/p&gt;
-&lt;ul&gt;
-  &lt;li&gt;Easy to make a mistake. One day we have found a rule &lt;code class=&quot;highlighter-rouge&quot;&gt;**/R*.class&lt;/code&gt; which supposed to filter out &lt;code class=&quot;highlighter-rouge&quot;&gt;R&lt;/code&gt; class &amp;amp; nested classes (known by every Android developer) but JaCoCo was ignoring all classes started with &lt;code class=&quot;highlighter-rouge&quot;&gt;R&lt;/code&gt; :)&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h4 id=&quot;2-annotation-processor&quot;&gt;2. Annotation processor&lt;/h4&gt;
-
-&lt;p&gt;Since all developers are lazy and we rather spend 1 day on automating routine job, my colleague came up with Annotation processor approach. He has created &lt;code class=&quot;highlighter-rouge&quot;&gt;NoCoverage&lt;/code&gt; annotation and a processor which saves all annotated classes into a file. Later on the file was used by &lt;code class=&quot;highlighter-rouge&quot;&gt;jacocoTestReport&lt;/code&gt; instead of &lt;code class=&quot;highlighter-rouge&quot;&gt;fileFilter&lt;/code&gt; array. Genius!&lt;/p&gt;
-
-&lt;p&gt;Pros:&lt;/p&gt;
-&lt;ul&gt;
-  &lt;li&gt;Automation!&lt;/li&gt;
-  &lt;li&gt;Less manual work&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Cons:&lt;/p&gt;
-&lt;ul&gt;
-  &lt;li&gt;APT is not suitable for this kind of jobs. Especially, if it doesn’t support incremental processing and you have many modules.&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;h4 id=&quot;3-forked-kotlin-compiler&quot;&gt;3. Forked Kotlin compiler&lt;/h4&gt;
-
-&lt;p&gt;We found out that JaCoCo team in order to support Lombok added a filter which doesn’t count coverage of &lt;code class=&quot;highlighter-rouge&quot;&gt;@Generated&lt;/code&gt; annotated classes/methods. Without thinking twice, another colleague has forked Kotlin compiler (!) and modified so it started adding &lt;code class=&quot;highlighter-rouge&quot;&gt;Generated&lt;/code&gt; annotation to every generated method. Of course, we haven’t used this approach in prod code. Later, JaCoCo added &lt;code class=&quot;highlighter-rouge&quot;&gt;@kotlin.Metadata&lt;/code&gt; filter too.&lt;/p&gt;
-
-&lt;p&gt;… and finally!&lt;/p&gt;
-
-&lt;h2 id=&quot;solution-annotation--kotlin-typealias&quot;&gt;Solution: Annotation + Kotlin typealias&lt;/h2&gt;
-
-&lt;p&gt;While investigating JaCoCo code I found that they changed &lt;code class=&quot;highlighter-rouge&quot;&gt;AnnotationGeneratedFilter&lt;/code&gt; behaviour. Now instead of checking exact match of annotation name it just should &lt;a href=&quot;https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51&quot;&gt;contain&lt;/a&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Generated&lt;/code&gt; word. It means we can create any annotation with proper name and JaCoCo will automatically ignore all annotated classes and methods.&lt;/p&gt;
-
-&lt;p&gt;In case of Kotlin you can use &lt;code class=&quot;highlighter-rouge&quot;&gt;typealias&lt;/code&gt; to make your code more readable:&lt;/p&gt;
-
-&lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@Retention&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;AnnotationRetention&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;BINARY&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;k&quot;&gt;annotation&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NoCoverageGenerated&lt;/span&gt;
-
-&lt;span class=&quot;k&quot;&gt;typealias&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NoCoverage&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NoCoverageGenerated&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;// or just&lt;/span&gt;
-
-&lt;span class=&quot;k&quot;&gt;typealias&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NoCoverage&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Generated&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// from javax.annotations package&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;Pros:&lt;/p&gt;
-&lt;ul&gt;
-  &lt;li&gt;Easy to use&lt;/li&gt;
-  &lt;li&gt;No code generation&lt;/li&gt;
-&lt;/ul&gt;
-
-&lt;p&gt;Cons:&lt;/p&gt;
-&lt;ul&gt;
-  &lt;li&gt;Workaround. From JaCoCo Wiki:
-    &lt;blockquote&gt;
-      &lt;p&gt;Remark: A Generated annotation should only be used for code actually generated by compilers or tools, never for manual exclusion.&lt;/p&gt;
-    &lt;/blockquote&gt;
-  &lt;/li&gt;
-  &lt;li&gt;Useless annotation in prod code. But if you use code obfuscator such as Proguard/Dexguard/R8 (Android) that annotation will be cut out.&lt;/li&gt;
-&lt;/ul&gt;</content><author><name>Anatolii Afanasev</name></author><summary type="html"></summary></entry><entry><title type="html">Sekret — risk-free toString() of Kotlin data class?</title><link href="https://afanasev.net/kotlin-library/2019/08/13/sekret.html" rel="alternate" type="text/html" title="Sekret — risk-free toString() of Kotlin data class?" /><published>2019-08-13T07:18:12+00:00</published><updated>2019-08-13T07:18:12+00:00</updated><id>https://afanasev.net/kotlin-library/2019/08/13/sekret</id><content type="html" xml:base="https://afanasev.net/kotlin-library/2019/08/13/sekret.html">&lt;h2 id=&quot;problem&quot;&gt;Problem&lt;/h2&gt;
-
-&lt;p&gt;Kotlin compiler automatically generates equals, hashCode, componentN, copy and &lt;strong&gt;toString&lt;/strong&gt; functions for Data classes. It’s super useful because you as a developer don’t have to spend time on writing boilerplate code and testing. But there is one problem (at least for me) — a result of toString() will contain all properties of Data class.&lt;/p&gt;
-
-&lt;p&gt;Let me explain why it can be a problem. For example in Android development, if you use MVI pattern, Views tend to have a single render() that accepts a state to render on the screen:&lt;/p&gt;
-
-&lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;data class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ViewState&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;username&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;password&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;isButtonEnabled&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Boolean&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;// PS: never keep passwords in String&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;Great, now you may want to add some logging system to able to understand what your customer’s behavior or what they have seen before a crash or for just debugging purpose:&lt;/p&gt;
-
-&lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;fun&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;render&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;viewState&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ViewState&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;n&quot;&gt;logger&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;render $viewState&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-    &lt;span class=&quot;o&quot;&gt;..&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;Logger class can use Log.d() internally and just prints on *logcat. *Or it can be your own analytics system which sends data to web or just saves in files. It can even be Google Analytics, Crashlytics.log or any other 3rd party vendor. Your application can be a reason for PII, passwords, credit card info or any other sensitive data leakage. I agree that the logging system should be much smarter than just saving everything and everywhere.&lt;/p&gt;
-
-&lt;p&gt;It’s not only about Android, but it can also be an issue everywhere especially on microservices architecture where every component is independent and logs all in / out data. It can happen in Repository with sealed class results + data classes, Actions from View to Presenter, State of StateMachine, etc…&lt;/p&gt;
-
-&lt;h2 id=&quot;solution&quot;&gt;Solution&lt;/h2&gt;
-
-&lt;p&gt;There are &lt;a href=&quot;https://github.com/aafanasev/sekret/blob/master/OTHER_WAYS.md&quot;&gt;many ways&lt;/a&gt; how we can exclude our properties from toString() result. But all of them needs manual work. Since developers are lazy I’ve implemented a tool which helps with this. &lt;strong&gt;Sekret&lt;/strong&gt; is Kotlin compiler plugin which changes generated Java bytecode of toString() method during the compilation process. You just need to annotate your property with a special annotation and that’s it!&lt;/p&gt;
-
-&lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;data class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
-    &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;username&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
-    &lt;span class=&quot;nd&quot;&gt;@Secret&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;password&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-
-&lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;james.bond&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;123456&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
-
-&lt;span class=&quot;c1&quot;&gt;// prints out&lt;/span&gt;
-&lt;span class=&quot;c1&quot;&gt;// Data(username=james.bond, password=■■■)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;More info on Github: &lt;a href=&quot;https://github.com/aafanasev/sekret&quot;&gt;https://github.com/aafanasev/sekret&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;Perhaps JetBrains will allow changing toString() body with an out-of-box solution like Transient annotation for serialization.&lt;/p&gt;
-
-&lt;p&gt;&lt;em&gt;This article was originally posted on &lt;a href=&quot;https://medium.com/@jokuskay/how-to-exclude-properties-from-tostring-of-kotlin-data-classes-f8dc04b8c45e&quot;&gt;Medium&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;</content><author><name>Anatolii Afanasev</name></author><summary type="html">Problem</summary></entry><entry><title type="html">KSON — auto-generate GSON adapters for Kotlin data classes</title><link href="https://afanasev.net/kotlin-library/2019/08/12/kson.html" rel="alternate" type="text/html" title="KSON — auto-generate GSON adapters for Kotlin data classes" /><published>2019-08-12T07:18:12+00:00</published><updated>2019-08-12T07:18:12+00:00</updated><id>https://afanasev.net/kotlin-library/2019/08/12/kson</id><content type="html" xml:base="https://afanasev.net/kotlin-library/2019/08/12/kson.html">&lt;p&gt;Kotlin data classes are super suitable as API entities. And it’s very easy to use them with GSON. But always keep in mind GSON uses ReflectiveTypeAdapterFactory by default which is not only slower, also it’s dangerous. Reflection doesn’t care about nullability of your properties. For example, this code will throw NullPointerException when you try to use &lt;strong&gt;entity.id&lt;/strong&gt; in your code though it should throw it earlier during parsing JSON:&lt;/p&gt;
-
-&lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;data class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Entity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;json&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&quot;&quot;{ &quot;id&quot;: null }&quot;&quot;&quot;&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;entity&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gson&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;fromJson&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;json&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Entity&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;java&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;span class=&quot;n&quot;&gt;entity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// &amp;lt;- Throws NPE&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;In order to solve this issue in Java, I used to use AutoValue with AutoGson extension but didn’t find any library for Kotlin (at that time). So I’ve decided to implement my own library and called it &lt;strong&gt;KSON&lt;/strong&gt;.&lt;/p&gt;
-
-&lt;p&gt;Simply annotate your data class with Kson annotation and annotation processor will generate null-safe GSON type adapter for your entity class:&lt;/p&gt;
-
-&lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@Kson&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;data class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Entity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;Also, you can use KsonFactory annotation and register auto-generated type adapter factory which contains all generated adapters:&lt;/p&gt;
-
-&lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@KsonFactory&lt;/span&gt;
-&lt;span class=&quot;kd&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;FactoryProvider&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
-    &lt;span class=&quot;k&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;KsonFactoryProvider&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// generated class&lt;/span&gt;
-&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
-
-&lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;gson&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;GsonBuilder&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
-    &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;registerTypeAdapterFactory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;FactoryProvider&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
-    &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;create&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
-
-&lt;p&gt;As you see, KSON doesn’t need any extra work, just need to add 1 annotation to your class and that’s it! If you don’t want to use for some reason you can simply delete 1 line of code.&lt;/p&gt;
-
-&lt;p&gt;More info on Github: &lt;a href=&quot;https://github.com/aafanasev/kson&quot;&gt;https://github.com/aafanasev/kson&lt;/a&gt;&lt;/p&gt;
-
-&lt;p&gt;&lt;em&gt;This article was originally posted on &lt;a href=&quot;https://medium.com/@jokuskay/kson-auto-generate-gson-adapters-for-kotlin-data-classes-17af43b6c267&quot;&gt;Medium&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;</content><author><name>Anatolii Afanasev</name></author><summary type="html">Kotlin data classes are super suitable as API entities. And it’s very easy to use them with GSON. But always keep in mind GSON uses ReflectiveTypeAdapterFactory by default which is not only slower, also it’s dangerous. Reflection doesn’t care about nullability of your properties. For example, this code will throw NullPointerException when you try to use entity.id in your code though it should throw it earlier during parsing JSON:</summary></entry></feed>
+        &lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;classDirectories&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;files&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;debugTree&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;])&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// some code...&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+        &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;p&gt;Pros:&lt;/p&gt;
+        &lt;ul&gt;
+        &lt;li&gt;All ignored classes in 1 place&lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;p&gt;Cons:&lt;/p&gt;
+        &lt;ul&gt;
+        &lt;li&gt;Easy to make a mistake. One day we have found a rule &lt;code class=&quot;highlighter-rouge&quot;&gt;**/R*.class&lt;/code&gt; which supposed to filter out &lt;code class=&quot;highlighter-rouge&quot;&gt;R&lt;/code&gt; class &amp;amp; nested classes (known by every Android developer) but JaCoCo was ignoring all classes started with &lt;code class=&quot;highlighter-rouge&quot;&gt;R&lt;/code&gt; :)&lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;h4 id=&quot;2-annotation-processor&quot;&gt;2. Annotation processor&lt;/h4&gt;
+        &lt;p&gt;Since all developers are lazy and we rather spend 1 day on automating routine job, my colleague came up with Annotation processor approach. He has created &lt;code class=&quot;highlighter-rouge&quot;&gt;NoCoverage&lt;/code&gt; annotation and a processor which saves all annotated classes into a file. Later on the file was used by &lt;code class=&quot;highlighter-rouge&quot;&gt;jacocoTestReport&lt;/code&gt; instead of &lt;code class=&quot;highlighter-rouge&quot;&gt;fileFilter&lt;/code&gt; array. Genius!&lt;/p&gt;
+        &lt;p&gt;Pros:&lt;/p&gt;
+        &lt;ul&gt;
+        &lt;li&gt;Automation!&lt;/li&gt;
+        &lt;li&gt;Less manual work&lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;p&gt;Cons:&lt;/p&gt;
+        &lt;ul&gt;
+        &lt;li&gt;APT is not suitable for this kind of jobs. Especially, if it doesn’t support incremental processing and you have many modules.&lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;h4 id=&quot;3-forked-kotlin-compiler&quot;&gt;3. Forked Kotlin compiler&lt;/h4&gt;
+        &lt;p&gt;We found out that JaCoCo team in order to support Lombok added a filter which doesn’t count coverage of &lt;code class=&quot;highlighter-rouge&quot;&gt;@Generated&lt;/code&gt; annotated classes/methods. Without thinking twice, another colleague has forked Kotlin compiler (!) and modified so it started adding &lt;code class=&quot;highlighter-rouge&quot;&gt;Generated&lt;/code&gt; annotation to every generated method. Of course, we haven’t used this approach in prod code. Later, JaCoCo added &lt;code class=&quot;highlighter-rouge&quot;&gt;@kotlin.Metadata&lt;/code&gt; filter too.&lt;/p&gt;
+        &lt;p&gt;… and finally!&lt;/p&gt;
+        &lt;h2 id=&quot;solution-annotation--kotlin-typealias&quot;&gt;Solution: Annotation + Kotlin typealias&lt;/h2&gt;
+        &lt;p&gt;While investigating JaCoCo code I found that they changed &lt;code class=&quot;highlighter-rouge&quot;&gt;AnnotationGeneratedFilter&lt;/code&gt; behaviour. Now instead of checking exact match of annotation name it just should &lt;a href=&quot;https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51&quot;&gt;contain&lt;/a&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;Generated&lt;/code&gt; word. It means we can create any annotation with proper name and JaCoCo will automatically ignore all annotated classes and methods.&lt;/p&gt;
+        &lt;p&gt;In case of Kotlin you can use &lt;code class=&quot;highlighter-rouge&quot;&gt;typealias&lt;/code&gt; to make your code more readable:&lt;/p&gt;
+        &lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@Retention&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;AnnotationRetention&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;BINARY&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;annotation&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NoCoverageGenerated&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;typealias&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NoCoverage&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NoCoverageGenerated&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// or just&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;typealias&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;NoCoverage&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Generated&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// from javax.annotations package&lt;/span&gt;
+        &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;p&gt;Pros:&lt;/p&gt;
+        &lt;ul&gt;
+        &lt;li&gt;Easy to use&lt;/li&gt;
+        &lt;li&gt;No code generation&lt;/li&gt;
+        &lt;/ul&gt;
+        &lt;p&gt;Cons:&lt;/p&gt;
+        &lt;ul&gt;
+        &lt;li&gt;Workaround. From JaCoCo Wiki:
+        &lt;blockquote&gt;
+        &lt;p&gt;Remark: A Generated annotation should only be used for code actually generated by compilers or tools, never for manual exclusion.&lt;/p&gt;
+        &lt;/blockquote&gt;
+        &lt;/li&gt;
+        &lt;li&gt;Useless annotation in prod code. But if you use code obfuscator such as Proguard/Dexguard/R8 (Android) that annotation will be cut out.&lt;/li&gt;
+        &lt;/ul&gt;</content><author><name>Anatolii Afanasev</name></author><summary type="html"></summary></entry><entry><title type="html">Sekret — risk-free toString() of Kotlin data class?</title><link href="https://afanasev.net/kotlin-library/2019/08/13/sekret.html" rel="alternate" type="text/html" title="Sekret — risk-free toString() of Kotlin data class?" /><published>2019-08-13T07:18:12+00:00</published><updated>2019-08-13T07:18:12+00:00</updated><id>https://afanasev.net/kotlin-library/2019/08/13/sekret</id><content type="html" xml:base="https://afanasev.net/kotlin-library/2019/08/13/sekret.html">&lt;h2 id=&quot;problem&quot;&gt;Problem&lt;/h2&gt;
+        &lt;p&gt;Kotlin compiler automatically generates equals, hashCode, componentN, copy and &lt;strong&gt;toString&lt;/strong&gt; functions for Data classes. It’s super useful because you as a developer don’t have to spend time on writing boilerplate code and testing. But there is one problem (at least for me) — a result of toString() will contain all properties of Data class.&lt;/p&gt;
+        &lt;p&gt;Let me explain why it can be a problem. For example in Android development, if you use MVI pattern, Views tend to have a single render() that accepts a state to render on the screen:&lt;/p&gt;
+        &lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;data class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ViewState&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;username&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;password&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;isButtonEnabled&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Boolean&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// PS: never keep passwords in String&lt;/span&gt;
+        &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;p&gt;Great, now you may want to add some logging system to able to understand what your customer’s behavior or what they have seen before a crash or for just debugging purpose:&lt;/p&gt;
+        &lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;fun&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;render&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;viewState&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;ViewState&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;logger&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;info&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;render $viewState&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;..&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+        &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;p&gt;Logger class can use Log.d() internally and just prints on *logcat. *Or it can be your own analytics system which sends data to web or just saves in files. It can even be Google Analytics, Crashlytics.log or any other 3rd party vendor. Your application can be a reason for PII, passwords, credit card info or any other sensitive data leakage. I agree that the logging system should be much smarter than just saving everything and everywhere.&lt;/p&gt;
+        &lt;p&gt;It’s not only about Android, but it can also be an issue everywhere especially on microservices architecture where every component is independent and logs all in / out data. It can happen in Repository with sealed class results + data classes, Actions from View to Presenter, State of StateMachine, etc…&lt;/p&gt;
+        &lt;h2 id=&quot;solution&quot;&gt;Solution&lt;/h2&gt;
+        &lt;p&gt;There are &lt;a href=&quot;https://github.com/aafanasev/sekret/blob/master/OTHER_WAYS.md&quot;&gt;many ways&lt;/a&gt; how we can exclude our properties from toString() result. But all of them needs manual work. Since developers are lazy I’ve implemented a tool which helps with this. &lt;strong&gt;Sekret&lt;/strong&gt; is Kotlin compiler plugin which changes generated Java bytecode of toString() method during the compilation process. You just need to annotate your property with a special annotation and that’s it!&lt;/p&gt;
+        &lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;data class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;username&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+        &lt;span class=&quot;nd&quot;&gt;@Secret&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;password&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;nf&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;Data&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;james.bond&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;123456&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// prints out&lt;/span&gt;
+        &lt;span class=&quot;c1&quot;&gt;// Data(username=james.bond, password=■■■)&lt;/span&gt;
+        &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;p&gt;More info on Github: &lt;a href=&quot;https://github.com/aafanasev/sekret&quot;&gt;https://github.com/aafanasev/sekret&lt;/a&gt;&lt;/p&gt;
+        &lt;p&gt;Perhaps JetBrains will allow changing toString() body with an out-of-box solution like Transient annotation for serialization.&lt;/p&gt;
+        &lt;p&gt;&lt;em&gt;This article was originally posted on &lt;a href=&quot;https://medium.com/@jokuskay/how-to-exclude-properties-from-tostring-of-kotlin-data-classes-f8dc04b8c45e&quot;&gt;Medium&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;</content><author><name>Anatolii Afanasev</name></author><summary type="html">Problem</summary></entry><entry><title type="html">KSON — auto-generate GSON adapters for Kotlin data classes</title><link href="https://afanasev.net/kotlin-library/2019/08/12/kson.html" rel="alternate" type="text/html" title="KSON — auto-generate GSON adapters for Kotlin data classes" /><published>2019-08-12T07:18:12+00:00</published><updated>2019-08-12T07:18:12+00:00</updated><id>https://afanasev.net/kotlin-library/2019/08/12/kson</id><content type="html" xml:base="https://afanasev.net/kotlin-library/2019/08/12/kson.html">&lt;p&gt;Kotlin data classes are super suitable as API entities. And it’s very easy to use them with GSON. But always keep in mind GSON uses ReflectiveTypeAdapterFactory by default which is not only slower, also it’s dangerous. Reflection doesn’t care about nullability of your properties. For example, this code will throw NullPointerException when you try to use &lt;strong&gt;entity.id&lt;/strong&gt; in your code though it should throw it earlier during parsing JSON:&lt;/p&gt;
+        &lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;data class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Entity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;json&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&quot;&quot;{ &quot;id&quot;: null }&quot;&quot;&quot;&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;entity&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;gson&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;fromJson&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;json&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Entity&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;java&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;entity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;id&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// &amp;lt;- Throws NPE&lt;/span&gt;
+        &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;p&gt;In order to solve this issue in Java, I used to use AutoValue with AutoGson extension but didn’t find any library for Kotlin (at that time). So I’ve decided to implement my own library and called it &lt;strong&gt;KSON&lt;/strong&gt;.&lt;/p&gt;
+        &lt;p&gt;Simply annotate your data class with Kson annotation and annotation processor will generate null-safe GSON type adapter for your entity class:&lt;/p&gt;
+        &lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@Kson&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;data class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Entity&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;id&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+        &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;p&gt;Also, you can use KsonFactory annotation and register auto-generated type adapter factory which contains all generated adapters:&lt;/p&gt;
+        &lt;div class=&quot;language-kotlin highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@KsonFactory&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;object&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;FactoryProvider&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;KsonFactoryProvider&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;c1&quot;&gt;// generated class&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;val&lt;/span&gt; &lt;span class=&quot;py&quot;&gt;gson&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;GsonBuilder&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;registerTypeAdapterFactory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;FactoryProvider&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;create&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+        &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+        &lt;p&gt;As you see, KSON doesn’t need any extra work, just need to add 1 annotation to your class and that’s it! If you don’t want to use for some reason you can simply delete 1 line of code.&lt;/p&gt;
+        &lt;p&gt;More info on Github: &lt;a href=&quot;https://github.com/aafanasev/kson&quot;&gt;https://github.com/aafanasev/kson&lt;/a&gt;&lt;/p&gt;
+        &lt;p&gt;&lt;em&gt;This article was originally posted on &lt;a href=&quot;https://medium.com/@jokuskay/kson-auto-generate-gson-adapters-for-kotlin-data-classes-17af43b6c267&quot;&gt;Medium&lt;/a&gt;.&lt;/em&gt;&lt;/p&gt;</content><author><name>Anatolii Afanasev</name></author><summary type="html">Kotlin data classes are super suitable as API entities. And it’s very easy to use them with GSON. But always keep in mind GSON uses ReflectiveTypeAdapterFactory by default which is not only slower, also it’s dangerous. Reflection doesn’t care about nullability of your properties. For example, this code will throw NullPointerException when you try to use entity.id in your code though it should throw it earlier during parsing JSON:</summary></entry></feed>
