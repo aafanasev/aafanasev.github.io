@@ -3,3 +3,4 @@ Disallow: /_github/
 Disallow: /_jekyll/
 Disallow: /.gitignore
 Disallow: /CNAME
+Sitemap: https://afanasev.net/sitemap.xml
