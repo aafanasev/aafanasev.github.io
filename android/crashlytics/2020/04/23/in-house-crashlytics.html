@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Implement your own in-house Crashlytics for Android | afanasev.net</title>
+    <meta property="og:title" content="Implement your own in-house Crashlytics for Android" />
+    <meta name="author" content="Anatolii Afanasev" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="description" content="Why" />
+    <meta property="og:description" content="Why" />
+    <link rel="canonical" href="https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html" />
+    <meta property="og:url" content="https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html" />
+    <meta property="og:site_name" content="afanasev.net" />
+    <meta property="og:type" content="article" />
+    <meta property="article:published_time" content="2020-04-23T16:18:12+00:00" />
+    <script type="application/ld+json">
+      {"@type":"BlogPosting","url":"https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html","mainEntityOfPage":{"@type":"WebPage","@id":"https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html"},"headline":"Implement your own in-house Crashlytics for Android","dateModified":"2020-04-23T16:18:12+00:00","datePublished":"2020-04-23T16:18:12+00:00","author":{"@type":"Person","name":"Anatolii Afanasev"},"description":"Why","@context":"https://schema.org"}
+    </script>
+    <link rel="stylesheet" href="/assets/main.css">
+    <link type="application/atom+xml" rel="alternate" href="https://afanasev.net/feed.xml" title="afanasev.net" />
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-60387111-7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      gtag('config', 'UA-60387111-7');
+    </script>
+  </head>
+  <body>
+    <header class="site-header" role="banner">
+      <div class="wrapper"><a class="site-title" rel="author" href="/">afanasev.net</a><nav class="site-nav">
+          <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+          <label for="nav-trigger">
+            <span class="menu-icon">
+              <svg viewBox="0 0 18 15" width="18px" height="15px">
+                <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+              </svg>
+            </span>
+          </label>
+          <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+        </nav></div>
+    </header>
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+          <header class="post-header">
+            <h1 class="post-title p-name" itemprop="name headline">Implement your own in-house Crashlytics for Android</h1>
+            <p class="post-meta">
+              <time class="dt-published" datetime="2020-04-23T16:18:12+00:00" itemprop="datePublished">Apr 23, 2020
+              </time></p>
+          </header>
+          <div class="post-content e-content" itemprop="articleBody">
+            <h2 id="why">Why</h2>
+            <p>We’ve been using Crashlytics by Fabric for many years in our company. When Google have acquired Fabric and asked Crashlytics users to migrate to Firebase, we started thinking what can happen with Crashlytics: will it require Play Services as other Firebase tools do (e.g. Firebase App Distribution), will it work in China (huge market for us), etc.</p>
+            <p>Actually, above situation was one of many reasons why we decided to implement our own crash catcher system. Having crash information in your own database opens a lot of opportunities. We do a lot of A/B testing, all new features are covered by feature flags, remote configurations, etc. Using the crash info such as a filename, line number we can identify which feature/experiment causes this crash and automatically &amp; remotely turn it off. This is just one use case. We can identify what team or developer this file or change belongs to using <code class="highlighter-rouge">git blame</code> and automatically <del>fire</del> notify them. Or even train ML models using all collected crashes. Let’s just imagine, you got a crash and in a minite you received an email with PR that fixes the crash. Infinite opportunities.</p>
+            <p>To be fair, we can acrhieve all things we imagined using Google’s BigQuery to export data from Firebase Crashlytics. But it’s not real-time and not free. Other libraries we didn’t like for one reason or another. We’d like to have 100% control.</p>
+            <h2 id="how">How</h2>
+            <p>Android (excluding JNI) is the easiest part of this huge system. Backend will be deobfuscating (proguard, R8), saving, analyzing, showing, notifying, etc. On client side, we should just catch exceptions and send them to the backend side. In order to do that, we must use <code class="highlighter-rouge">setDefaultUncaughtExceptionHandler</code> method of <code class="highlighter-rouge">Thread</code> class. Do not forget to “save” previously set handler and pass caught data to it once we’re done. Otherwise, Android won’t kill the process.</p>
+            <div class="language-kotlin highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code><span class="kd">val</span> <span class="py">defaultHandler</span> <span class="p">=</span> <span class="nc">Thread</span><span class="p">.</span><span class="nf">getDefaultUncaughtExceptionHandler</span><span class="p">()</span>
+
+<span class="nc">Thread</span><span class="p">.</span><span class="nf">setDefaultUncaughtExceptionHandler</span> <span class="p">{</span> <span class="n">thread</span><span class="p">,</span> <span class="n">throwable</span> <span class="p">-&gt;</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="n">crashLogger</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="n">thread</span><span class="p">,</span> <span class="n">throwable</span><span class="p">)</span>
+    <span class="p">}</span> <span class="k">finally</span> <span class="p">{</span>
+        <span class="n">defaultHandler</span><span class="p">.</span><span class="nf">uncaughtHandler</span><span class="p">(</span><span class="n">thread</span><span class="p">,</span> <span class="n">throwable</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre>
+              </div>
+            </div>
+            <p><code class="highlighter-rouge">CrashLogger</code> interface might look like this. We have to save stacktrace somewhere locally and next app launch it’s need to be sent to the server. We can’t immediatelly make network call once we caught a crash because it will be too slow.</p>
+            <div class="language-kotlin highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code><span class="kd">interface</span> <span class="nc">CrashLogger</span> <span class="p">{</span>
+    <span class="k">fun</span> <span class="nf">log</span><span class="p">(</span><span class="n">thread</span><span class="p">:</span> <span class="nc">Thread</span><span class="p">,</span> <span class="n">throwable</span><span class="p">:</span> <span class="nc">Throwable</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="kd">class</span> <span class="nc">FileCrashLogger</span> <span class="p">:</span> <span class="nc">CrashLogger</span> <span class="p">{</span> <span class="o">..</span><span class="p">.</span> <span class="p">}</span>
+<span class="kd">class</span> <span class="nc">SqliteCrashLogger</span> <span class="p">:</span> <span class="nc">CrashLogger</span> <span class="p">{</span> <span class="o">..</span><span class="p">.</span> <span class="p">}</span>
+</code></pre>
+              </div>
+            </div>
+            <p>Easy way of converting throwable stacktrace to string:</p>
+            <div class="language-kotlin highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code><span class="kd">val</span> <span class="py">sw</span> <span class="p">=</span> <span class="nc">StringWriter</span><span class="p">()</span>
+<span class="n">throwable</span><span class="p">.</span><span class="nf">printStackTrace</span><span class="p">(</span><span class="nc">PrintWriter</span><span class="p">(</span><span class="n">sw</span><span class="p">))</span>
+<span class="kd">val</span> <span class="py">str</span> <span class="p">=</span> <span class="n">sw</span><span class="p">.</span><span class="nf">toString</span><span class="p">()</span>
+</code></pre>
+              </div>
+            </div>
+            <p>If you want to get all stacktraces from all threads:</p>
+            <div class="language-kotlin highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code><span class="kd">val</span> <span class="py">stackTraces</span> <span class="p">=</span> <span class="n">mutableMapOf</span><span class="p">&lt;</span><span class="nc">String</span><span class="p">,</span> <span class="nc">String</span><span class="p">&gt;()</span>
+
+<span class="nc">Thread</span><span class="p">.</span><span class="nf">getAllStackTraces</span><span class="p">().</span><span class="nf">forEach</span> <span class="p">{</span> <span class="p">(</span><span class="n">thread</span><span class="p">,</span> <span class="n">stackTrace</span><span class="p">)</span> <span class="p">-&gt;</span>
+    <span class="kd">val</span> <span class="py">stringBuilder</span> <span class="p">=</span> <span class="nc">StringBuilder</span><span class="p">(</span><span class="n">thread</span><span class="p">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="n">stackTrace</span><span class="p">.</span><span class="nf">forEach</span> <span class="p">{</span> <span class="n">element</span> <span class="p">-&gt;</span>
+        <span class="n">stringBuilder</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="s">"\n\tat "</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">element</span><span class="p">.</span><span class="n">className</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="sc">'.'</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">element</span><span class="p">.</span><span class="n">methodName</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="sc">'('</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">element</span><span class="p">.</span><span class="n">fileName</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="sc">':'</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">element</span><span class="p">.</span><span class="n">lineNumber</span><span class="p">)</span>
+            <span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="sc">')'</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="n">stackTraces</span><span class="p">[</span><span class="n">thread</span><span class="p">.</span><span class="n">name</span><span class="p">]</span> <span class="p">=</span> <span class="n">stringBuilder</span><span class="p">.</span><span class="nf">toString</span><span class="p">()</span>
+<span class="p">}</span>
+</code></pre>
+              </div>
+            </div>
+            <p><em>NOTE: This code is just a sample. If you really want to create your own Crashlytics and make it production ready there are many things to keep in mind, at least Multi processes, JNI (if you use it).</em></p>
+          </div>
+          <div id="disqus_thread"></div>
+          <script>
+            var disqus_config = function () {
+              this.page.url = 'https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html';
+              this.page.identifier = 'https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html';
+            };
+            
+            (function() {
+              var d = document, s = d.createElement('script');
+            
+              s.src = 'https://afanasev-net.disqus.com/embed.js';
+            
+              s.setAttribute('data-timestamp', +new Date());
+              (d.head || d.body).appendChild(s);
+            })();
+          </script>
+          <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+          <a class="u-url" href="/android/crashlytics/2020/04/23/in-house-crashlytics.html" hidden></a>
+        </article>
+      </div>
+    </main>
+    <footer class="site-footer h-card">
+      <data class="u-url" href="/"></data>
+      <div class="wrapper">
+        <h2 class="footer-heading">afanasev.net</h2>
+        <div class="footer-col-wrapper">
+          <div class="footer-col footer-col-1">
+            <ul class="contact-list">
+              <li class="p-name">Anatolii Afanasev</li>
+              <li><a class="u-email" href="mailto:tafanasyev@gmail.com">tafanasyev@gmail.com</a></li>
+            </ul>
+          </div>
+          <div class="footer-col footer-col-2">
+            <ul class="social-media-list">
+              <li><a href="https://github.com/aafanasev"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">aafanasev</span></a></li>
+              <li><a href="https://www.linkedin.com/in/aafanasev"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#linkedin"></use></svg> <span class="username">aafanasev</span></a></li>
+            </ul>
+          </div>
+          <div class="footer-col footer-col-3">
+            <p>Boring coding</p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
