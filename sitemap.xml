@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+      <loc>https://afanasev.net/kotlin-library/2019/08/12/kson.html</loc>
+      <lastmod>2019-08-12T07:18:12+00:00</lastmod>
+    </url>
+    <url>
+      <loc>https://afanasev.net/kotlin-library/2019/08/13/sekret.html</loc>
+      <lastmod>2019-08-13T07:18:12+00:00</lastmod>
+    </url>
+    <url>
+      <loc>https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html</loc>
+      <lastmod>2019-08-13T08:00:00+00:00</lastmod>
+    </url>
+    <url>
+      <loc>https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html</loc>
+      <lastmod>2020-04-10T09:26:00+00:00</lastmod>
+    </url>
+    <url>
+      <loc>https://afanasev.net/about/</loc>
+    </url>
+    <url>
+      <loc>https://afanasev.net/</loc>
+    </url>
+  </urlset>
