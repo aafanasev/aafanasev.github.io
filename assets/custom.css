@@ -2,4 +2,3 @@
 .social-media-list li + li, .social-media-list .svg-icon { padding: 0; }
 .social-media-list .username { display: none; }
 .social-media-list:after { content: ""; clear: both; }
-/*# sourceMappingURL=custom.css.map */
