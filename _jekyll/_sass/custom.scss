@@ -1,0 +1,20 @@
+.social-media-list {
+    li {
+        float: left;
+        margin: 2px;
+    }
+
+    li + li,
+    .svg-icon {
+        padding: 0;
+    }
+    
+    .username {
+        display: none;
+    }
+
+    &:after {
+        content: "";
+        clear: both;
+    }
+}
