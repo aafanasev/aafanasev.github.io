@@ -13,6 +13,9 @@ plugins:
   - jekyll-tidy
   - jekyll-sitemap
 
+sass:
+  sourcemap: development
+
 google_analytics: UA-60387111-7
 disqus:
   shortname: afanasev-net
