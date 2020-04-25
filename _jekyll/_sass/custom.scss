@@ -1,7 +1,7 @@
 .social-media-list {
     li {
         float: left;
-        margin: 2px;
+        margin: 2px 6px 2px 0;
     }
 
     li + li,
@@ -15,6 +15,7 @@
 
     &:after {
         content: "";
+        display: table;
         clear: both;
     }
 }
