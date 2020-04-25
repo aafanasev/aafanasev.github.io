@@ -154,7 +154,7 @@ table td { border: 1px solid #e8e8e8; }
 .highlight .vg { color: #008080; }
 .highlight .vi { color: #008080; }
 .highlight .il { color: #099; }
-.social-media-list li { float: left; margin: 2px; }
+.social-media-list li { float: left; margin: 2px 6px 2px 0; }
 .social-media-list li + li, .social-media-list .svg-icon { padding: 0; }
 .social-media-list .username { display: none; }
-.social-media-list:after { content: ""; clear: both; }
+.social-media-list:after { content: ""; display: table; clear: both; }
