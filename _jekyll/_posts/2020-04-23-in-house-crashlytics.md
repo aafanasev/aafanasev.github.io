@@ -29,6 +29,8 @@ Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
 }
 ```
 
+This code can be called from `Application#onCreate()` or `ContentProvider` which is called even earlier.
+
 `CrashLogger` interface might look like this. We have to save stacktrace somewhere locally and next app launch it's need to be sent to the server. We can't immediatelly make network call once we caught a crash because it will be too slow.
 
 ```kotlin
