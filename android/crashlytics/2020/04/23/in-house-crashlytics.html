@@ -72,6 +72,7 @@
 </code></pre>
               </div>
             </div>
+            <p>This code can be called from <code class="highlighter-rouge">Application#onCreate()</code> or <code class="highlighter-rouge">ContentProvider</code> which is called even earlier.</p>
             <p><code class="highlighter-rouge">CrashLogger</code> interface might look like this. We have to save stacktrace somewhere locally and next app launch it’s need to be sent to the server. We can’t immediatelly make network call once we caught a crash because it will be too slow.</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
