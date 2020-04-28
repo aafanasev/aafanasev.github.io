@@ -120,6 +120,18 @@
 </code></pre>
               </div>
             </div>
+            <p>If you’d like to know only minimum information you can use the code below:</p>
+            <div class="language-kotlin highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code><span class="n">throwable</span><span class="p">.</span><span class="n">stackTrace</span><span class="o">?.</span><span class="nf">firstOrNull</span><span class="p">()</span><span class="o">?.</span><span class="nf">let</span> <span class="p">{</span> <span class="n">crash</span> <span class="p">-&gt;</span>
+    <span class="n">crash</span><span class="p">.</span><span class="n">fileName</span> <span class="c1">// sample.kt</span>
+    <span class="n">crash</span><span class="p">.</span><span class="n">lineNumber</span> <span class="c1">// 42</span>
+    <span class="n">crash</span><span class="p">.</span><span class="n">className</span> <span class="c1">// Sample</span>
+<span class="p">}</span>
+</code></pre>
+              </div>
+            </div>
+            <p>Remember, <code class="highlighter-rouge">Throwable#getStackTrace()</code> method can return an empty array if <code class="highlighter-rouge">writableStackTrace</code> flag is false (e.g. <code class="highlighter-rouge">ArithmeticException</code>).</p>
             <p><em>NOTE: This code is just a sample. If you really want to create your own Crashlytics and make it production ready there are many things to keep in mind, at least Multi processes, JNI (if you use it).</em></p>
           </div>
           <div id="disqus_thread"></div>
