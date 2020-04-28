@@ -75,4 +75,16 @@ Thread.getAllStackTraces().forEach { (thread, stackTrace) ->
 }
 ```
 
+If you'd like to know only minimum information you can use the code below:
+
+```kotlin
+throwable.stackTrace?.firstOrNull()?.let { crash ->
+    crash.fileName // sample.kt
+    crash.lineNumber // 42
+    crash.className // Sample
+}
+```
+
+Remember, `Throwable#getStackTrace()` method can return an empty array if `writableStackTrace` flag is false (e.g. `ArithmeticException`).
+
 *NOTE: This code is just a sample. If you really want to create your own Crashlytics and make it production ready there are many things to keep in mind, at least Multi processes, JNI (if you use it).*
