@@ -12,5 +12,5 @@ Keep in touch:
 Projects:
 
 - [Sakha wordle](https://wordle.afanasev.net/){:target="\_blank"} - a clone of Wordle game in Sakha language.
-- [Sekret](https://github.com/aafanasev/sekret){:target="\_blank"} - Kotlin compiler plugin that allows to hide properties from the generated `toString` function of data clasess.
+- [Sekret](https://github.com/aafanasev/sekret){:target="\_blank"} - Kotlin compiler plugin that modifies the generated `toString` function of data clasess to hide specific properties.
 - [KSON](https://github.com/aafanasev/kson){:target="\_blank"} - Type factory generator for GSON.
