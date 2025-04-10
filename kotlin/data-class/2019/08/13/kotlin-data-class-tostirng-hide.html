@@ -14,8 +14,10 @@
     <meta property="og:site_name" content="afanasev.net" />
     <meta property="og:type" content="article" />
     <meta property="article:published_time" content="2019-08-13T08:00:00+00:00" />
+    <meta name="twitter:card" content="summary" />
+    <meta property="twitter:title" content="Exclude properties from toString() of Kotlin data class (Sekret appx.)" />
     <script type="application/ld+json">
-      {"@type":"BlogPosting","url":"https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html","mainEntityOfPage":{"@type":"WebPage","@id":"https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"},"headline":"Exclude properties from toString() of Kotlin data class (Sekret appx.)","dateModified":"2019-08-13T08:00:00+00:00","datePublished":"2019-08-13T08:00:00+00:00","author":{"@type":"Person","name":"Anatolii Afanasev"},"description":"This post describes how to remove class properties from toString() method manually if you don’t want to use Sekret library.","@context":"https://schema.org"}
+      {"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Anatolii Afanasev"},"dateModified":"2019-08-13T08:00:00+00:00","datePublished":"2019-08-13T08:00:00+00:00","description":"This post describes how to remove class properties from toString() method manually if you don’t want to use Sekret library.","headline":"Exclude properties from toString() of Kotlin data class (Sekret appx.)","mainEntityOfPage":{"@type":"WebPage","@id":"https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"},"url":"https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"}
     </script>
     <link rel="stylesheet" href="/assets/main.css">
     <link type="application/atom+xml" rel="alternate" href="https://afanasev.net/feed.xml" title="afanasev.net" />
@@ -24,7 +26,7 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      
+
       gtag('config', 'UA-60387111-7');
     </script>
   </head>
@@ -52,9 +54,9 @@
               </time></p>
           </header>
           <div class="post-content e-content" itemprop="articleBody">
-            <p><em>This post describes how to remove class properties from <code class="highlighter-rouge">toString()</code> method manually if you don’t want to use <a href="/kotlin-library/2019/08/13/sekret.html">Sekret</a> library.</em></p>
+            <p><em>This post describes how to remove class properties from <code class="language-plaintext highlighter-rouge">toString()</code> method manually if you don’t want to use <a href="/kotlin-library/2019/08/13/sekret.html">Sekret</a> library.</em></p>
             <h3 id="1-override-tostring-by-yourself">1. Override toString() by yourself</h3>
-            <p>The simplest way how you can hide sensitive information is overriding <code class="highlighter-rouge">toString</code>. 
+            <p>The simplest way how you can hide sensitive information is overriding <code class="language-plaintext highlighter-rouge">toString</code>. 
               But it always needs an additional work in every class. What if you want to show other properties? You will have to concatenate strings by yourself.</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
@@ -121,12 +123,12 @@
               this.page.url = 'https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html';
               this.page.identifier = 'https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html';
             };
-            
+
             (function() {
               var d = document, s = d.createElement('script');
-            
+
               s.src = 'https://afanasev-net.disqus.com/embed.js';
-            
+
               s.setAttribute('data-timestamp', +new Date());
               (d.head || d.body).appendChild(s);
             })();
