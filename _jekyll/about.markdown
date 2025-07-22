@@ -4,13 +4,10 @@ title: About
 permalink: /about/
 ---
 
-Keep in touch:
+I'm a software engineer with a focus on secure messaging, Android development, and open-source contributions. Over the years, I've built applications ranging from mobile radio platforms to privacy-preserving developer tools.
 
-- [LinkedIn](https://www.linkedin.com/in/aafanasev/){:target="\_blank"}
-- [GitHub](https://github.com/aafanasev){:target="\_blank"}
+### Connect with Me
 
-Projects:
-
-- [Sakha wordle](https://wordle.afanasev.net/){:target="\_blank"} - a clone of Wordle game in Sakha language.
-- [Sekret](https://github.com/aafanasev/sekret){:target="\_blank"} - Kotlin compiler plugin that modifies the generated `toString()` function of data clasess to hide specific properties.
-- [KSON](https://github.com/aafanasev/kson){:target="\_blank"} - A type factory generator for GSON.
+- [GitHub](https://github.com/afanasev){:target="_blank"}
+- [LinkedIn](https://www.linkedin.com/in/afanasev/){:target="_blank"}
+- [Mentoring](https://adplist.org/mentors/anatolii-afanasev){:target="_blank"}
