@@ -54,16 +54,33 @@
               </time></p>
           </header>
           <div class="post-content e-content" itemprop="articleBody">
-            <p style="text-align: center;"><img src="/assets/img/jacoco-code-coverage.png" alt="JaCoCo code coverate report with Generated annotation" /></p>
+            <p style="text-align: center;"><img src="/assets/img/jacoco-code-coverage.png" alt="JaCoCo code coverage report with Generated annotation" /></p>
             <h2 id="story">Story</h2>
-            <p>(can be skipped)</p>
-            <p>Long time ago in our company, we decided to use code coverage level as one of the must requirements to merge PR into <code class="language-plaintext highlighter-rouge">develop</code> branch. We have automated merge bot which automatically merges if the branch meets all requirements. We came up with magic number <code class="language-plaintext highlighter-rouge">80%</code>, so every new/modified class must be covered by Unit tests as minimum 80%.</p>
-            <p><em>There are many discussions about code coverage, 80%, JaCoCo, etc. This article is not about that.</em></p>
-            <p>We were happy with this requirement. Teams started to write more testable code, think about architecture, app stability went up, etc. We understood it’s impossible to cover all classes in our project, there are many reasons: legacy code (lots of LOC need to be refactored; Business just won’t give time for that; “if it works don’t touch!”), auto-generated code (why we need to test 3rd party libs, etc), some code frankly does not need to be tested. Therefore, we need a way to filter out specific classes from JaCoCo report and allow devs/tools to merge branches.</p>
-            <p>Even more problems started to appear after moving to Kotlin from Java. JaCoCo, as you may know, works as java-agent with java bytecode only. Kotlin is a great language which reduced boilerplate code a lot but underhood the hood (in case of JVM) it generates a lot of helper methods, lines of code. For example, data class becomes a class with auto-generated methods such as <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">component1</code>, etc; even one line of code like <code class="language-plaintext highlighter-rouge">s?.foo()</code> or just <code class="language-plaintext highlighter-rouge">s.foo()</code> (where <code class="language-plaintext highlighter-rouge">s</code> defined as <code class="language-plaintext highlighter-rouge">lateinit</code>) will have 1 <code class="language-plaintext highlighter-rouge">if</code> in the generated code. Obviuosly, we do not have to test the generated code. All this generated stuff dramatically decreased our code coverage numbers. Keep in mind, those numbers can be KPI for some teams (yeah, bloody enterprise…).</p>
-            <h2 id="ideas">Ideas</h2>
-            <h4 id="1-custom-gradle-task-with-filter">1. Custom Gradle task with filter</h4>
-            <p>This way is suitable for most teams. Create a task using <code class="language-plaintext highlighter-rouge">JacocoReport</code> and make it depend on <code class="language-plaintext highlighter-rouge">test</code> &amp; <code class="language-plaintext highlighter-rouge">generate report</code> tasks. Then define an array of classes that you want to ignore and pass it as <code class="language-plaintext highlighter-rouge">excludes</code> parameter of <code class="language-plaintext highlighter-rouge">fileTree</code> method.</p>
+            <p>Engineering culture at scale is difficult to build and even harder to maintain. In our company, we made a deliberate decision to enforce code coverage as a merge requirement — a hard gate on the CI pipeline that prevented branches from being merged unless they met a minimum threshold. We chose 80%: every new or modified class had to be covered by unit tests to at least that level.</p>
+            <p><em>There are many debates about what the right coverage threshold is, whether coverage is a useful metric at all, and how to avoid gaming it. This article is not about that.</em></p>
+            <p>The policy had real effects. Teams began writing more testable code. Architecture improved — highly coupled, untestable code tends to resist coverage requirements in ways that become impossible to ignore. App stability measurably increased. The discipline around testing became part of how we worked, not an afterthought.</p>
+            <p>But we quickly discovered a class of code that was untestable not through neglect or poor design, but by its nature:</p>
+            <ul>
+              <li><strong>Legacy code</strong> with deeply tangled dependencies, thousands of lines that would require months of refactoring before tests could be written — refactoring that the business would not prioritize because “it works”</li>
+              <li><strong>Auto-generated code</strong> — output from annotation processors, AIDL interface bindings, generated Room DAOs, Dagger components — code that is correct by construction and pointless to re-test</li>
+              <li><strong>Delegating code</strong> that exists only to forward calls and has no logic to verify</li>
+            </ul>
+            <p>These classes needed to be excluded from coverage calculations so that teams could meet the threshold on the code they actually owned and controlled.</p>
+            <p>Then we migrated from Java to Kotlin, and the problem became significantly more complex.</p>
+            <h2 id="the-kotlin-bytecode-problem">The Kotlin Bytecode Problem</h2>
+            <p>JaCoCo operates at the bytecode level. It instruments compiled <code class="language-plaintext highlighter-rouge">.class</code> files by injecting probes that track which lines and branches have been executed. This works reliably for Java code, where the relationship between source lines and bytecode is relatively straightforward.</p>
+            <p>Kotlin is different. The language is designed to eliminate boilerplate, and it achieves this by having the compiler generate significant amounts of bytecode from compact source constructs. A few examples:</p>
+            <ul>
+              <li>A simple <code class="language-plaintext highlighter-rouge">data class</code> with three fields generates <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">toString</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and three <code class="language-plaintext highlighter-rouge">componentN</code> functions — all as fully-realized bytecode methods that JaCoCo counts independently.</li>
+              <li>A safe call <code class="language-plaintext highlighter-rouge">s?.foo()</code> compiles to a null check (<code class="language-plaintext highlighter-rouge">if</code>/<code class="language-plaintext highlighter-rouge">else</code> branch in bytecode), even though there is no explicit conditional in the source.</li>
+              <li>A <code class="language-plaintext highlighter-rouge">lateinit var</code> field access generates a null check that appears as an uncovered branch if the test path never triggers the uninitialized case.</li>
+              <li>Companion objects, object declarations, and sealed class subclasses all generate additional bytecode scaffolding.</li>
+            </ul>
+            <p>The result: coverage numbers for Kotlin projects are systematically lower than the source code suggests. A data class that any developer would consider fully tested — constructors called, methods invoked — shows gaps because JaCoCo is counting generated bytecode that has no corresponding source line for tests to exercise. For a large Kotlin project, this distortion can move the effective coverage percentage by 5–15 points.</p>
+            <p>When coverage is a KPI, or when it gates merges in an automated pipeline, that distortion has real consequences.</p>
+            <h2 id="approaches-we-explored">Approaches We Explored</h2>
+            <h3 id="1-custom-gradle-task-with-filename-filters">1. Custom Gradle task with filename filters</h3>
+            <p>The standard approach, and the first thing any team discovers when searching for this problem, is to define an exclusion list in the <code class="language-plaintext highlighter-rouge">JacocoReport</code> Gradle task:</p>
             <div class="language-groovy highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="n">task</span> <span class="nf">jacocoTestReport</span><span class="o">(</span><span class="nl">type:</span> <span class="n">JacocoReport</span><span class="o">,</span> <span class="nl">dependsOn:</span> <span class="o">[...])</span> <span class="o">{</span>
@@ -74,7 +91,7 @@
     <span class="o">]</span>
 
     <span class="kt">def</span> <span class="n">debugTree</span> <span class="o">=</span> <span class="n">fileTree</span><span class="o">(</span>
-        <span class="nl">dir:</span> <span class="s2">"${buildDir}/intermediates/classes/debug"</span><span class="o">,</span> 
+        <span class="nl">dir:</span> <span class="s2">"${buildDir}/intermediates/classes/debug"</span><span class="o">,</span>
         <span class="nl">excludes:</span> <span class="n">fileFilter</span> <span class="c1">// &lt;-- exclude listed classes</span>
     <span class="o">)</span>
 
@@ -85,31 +102,23 @@
 </code></pre>
               </div>
             </div>
-            <p>Pros:</p>
-            <ul>
-              <li>All ignored classes in 1 place</li>
-            </ul>
-            <p>Cons:</p>
-            <ul>
-              <li>Easy to make a mistake. One day we have found a rule <code class="language-plaintext highlighter-rouge">**/R*.class</code> which supposed to filter out <code class="language-plaintext highlighter-rouge">R</code> class &amp; nested classes (known by every Android developer) but JaCoCo was ignoring all classes started with <code class="language-plaintext highlighter-rouge">R</code> :)</li>
-            </ul>
-            <h4 id="2-annotation-processor">2. Annotation processor</h4>
-            <p>Since all developers are lazy and we rather spend 1 day on automating routine job, my colleague came up with Annotation processor approach. He has created <code class="language-plaintext highlighter-rouge">NoCoverage</code> annotation and a processor which saves all annotated classes into a file. Later on the file was used by <code class="language-plaintext highlighter-rouge">jacocoTestReport</code> instead of <code class="language-plaintext highlighter-rouge">fileFilter</code> array. Genius!</p>
-            <p>Pros:</p>
-            <ul>
-              <li>Automation!</li>
-              <li>Less manual work</li>
-            </ul>
-            <p>Cons:</p>
-            <ul>
-              <li>APT is not suitable for this kind of jobs. Especially, if it doesn’t support incremental processing and you have many modules.</li>
-            </ul>
-            <h4 id="3-forked-kotlin-compiler">3. Forked Kotlin compiler</h4>
-            <p>We found out that JaCoCo team in order to support Lombok added a filter which doesn’t count coverage of <code class="language-plaintext highlighter-rouge">@Generated</code> annotated classes/methods. Without thinking twice, another colleague has forked Kotlin compiler (!) and modified so it started adding <code class="language-plaintext highlighter-rouge">Generated</code> annotation to every generated method. Of course, we haven’t used this approach in prod code. Later, JaCoCo added <code class="language-plaintext highlighter-rouge">@kotlin.Metadata</code> filter too.</p>
-            <p>… and finally!</p>
+            <p>This works for known, predictable class names — <code class="language-plaintext highlighter-rouge">R.class</code>, generated Dagger classes, known suffixes. The exclusion list lives in one place and is easy to audit.</p>
+            <p>The problem is that glob patterns applied to class names are brittle. In one memorable incident, a rule intended to exclude <code class="language-plaintext highlighter-rouge">R.class</code> and its nested classes (<code class="language-plaintext highlighter-rouge">**/R$*.class</code>) was written as <code class="language-plaintext highlighter-rouge">**/R*.class</code> — a subtle difference that caused JaCoCo to silently exclude every class whose name began with “R”. This went unnoticed for weeks, producing a coverage report that was technically generated but factually wrong.</p>
+            <p>Glob-based exclusion also creates an organizational problem: the list of excluded classes is in the build configuration, disconnected from the source files. There is no mechanism to detect when an exclusion entry becomes stale because the class it targeted was renamed or deleted. The list tends to accumulate cruft over time.</p>
+            <h3 id="2-annotation-processor">2. Annotation processor</h3>
+            <p>A colleague proposed a more elegant solution: create a <code class="language-plaintext highlighter-rouge">@NoCoverage</code> annotation and an annotation processor that reads it at compile time, collects all annotated class names, and writes them to a file. The Gradle task would then read that file as its exclusion list instead of a hardcoded array.</p>
+            <p>This was genuinely clever. The exclusion list becomes self-maintaining — developers annotate the classes they want excluded, and the configuration stays in sync with the source automatically.</p>
+            <p>The practical limitation is a phase mismatch. Annotation processors run during Kotlin/Java compilation. The <code class="language-plaintext highlighter-rouge">JacocoReport</code> Gradle task runs after compilation, during test execution and report generation. Coordinating the output of the annotation processor as an input to the Gradle task requires explicit task dependency wiring that is fragile across Gradle versions, build types, and module boundaries. In a multi-module project, the complexity becomes significant.</p>
+            <p>APT was designed to generate code, not to produce configuration consumed by external Gradle tasks. Using it for this purpose works, but it fights against the tool’s intended grain.</p>
+            <h3 id="3-forked-kotlin-compiler">3. Forked Kotlin compiler</h3>
+            <p>We learned that the JaCoCo team had added a special filter for Lombok — a Java code generation library — that suppressed coverage counting for methods annotated with <code class="language-plaintext highlighter-rouge">@Generated</code>. This made perfect sense: Lombok-generated code, like Kotlin-generated code, should not require test coverage.</p>
+            <p>A colleague proposed the obvious extension: if JaCoCo respects <code class="language-plaintext highlighter-rouge">@Generated</code> on methods, and if the Kotlin compiler generated that annotation on its auto-generated methods (data class helpers, etc.), the problem would be solved at the source.</p>
+            <p>The Kotlin compiler does not do this. So the colleague forked the Kotlin compiler and modified it to add <code class="language-plaintext highlighter-rouge">@Generated</code> annotations to every compiler-generated method.</p>
+            <p>This is remarkable. Forking a programming language’s compiler to solve a tooling problem is a drastic step, and it demonstrates both the severity of the issue and the depth of knowledge required to address it at that level. The forked compiler was never used in production — the maintenance burden would be untenable — but the experiment proved the concept worked.</p>
+            <p>Subsequently, JaCoCo added its own filter for <code class="language-plaintext highlighter-rouge">@kotlin.Metadata</code>, which covers some Kotlin-generated constructs. But this did not fully solve the problem for all generated code in Kotlin projects.</p>
             <h2 id="solution-annotation--kotlin-typealias">Solution: Annotation + Kotlin typealias</h2>
-            <p>While investigating JaCoCo code I found that they changed <code class="language-plaintext highlighter-rouge">AnnotationGeneratedFilter</code> behaviour. Now instead of checking exact match of annotation name it just should <a href="https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51">contain</a> <code class="language-plaintext highlighter-rouge">Generated</code> word. It means we can create any annotation with proper name and JaCoCo will automatically ignore all annotated classes and methods.</p>
-            <p>In case of Kotlin you can use <code class="language-plaintext highlighter-rouge">typealias</code> to make your code more readable:</p>
+            <p>While reading JaCoCo’s source code to understand what filters were available, I discovered something significant. The <code class="language-plaintext highlighter-rouge">AnnotationGeneratedFilter</code> — the filter originally added for Lombok support — had been changed from an exact name match to a <strong>substring match</strong>. Specifically, the annotation’s simple class name only needs to <a href="https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51">contain the word “Generated”</a>.</p>
+            <p>This means that any annotation whose class name contains “Generated” will cause JaCoCo to exclude the annotated element from coverage analysis. We do not need to use <code class="language-plaintext highlighter-rouge">javax.annotation.Generated</code>. We can create our own annotation with an appropriate name:</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="nd">@Retention</span><span class="p">(</span><span class="nc">AnnotationRetention</span><span class="p">.</span><span class="nc">BINARY</span><span class="p">)</span>
@@ -123,20 +132,34 @@
 </code></pre>
               </div>
             </div>
-            <p>Pros:</p>
+            <p>The <code class="language-plaintext highlighter-rouge">typealias</code> is a small but meaningful touch. At the bytecode level, <code class="language-plaintext highlighter-rouge">NoCoverage</code> is transparent — the JVM sees <code class="language-plaintext highlighter-rouge">NoCoverageGenerated</code>, which contains “Generated” and triggers the JaCoCo filter. At the source level, <code class="language-plaintext highlighter-rouge">@NoCoverage</code> is readable and clearly expresses the developer’s intent: this class is intentionally excluded from coverage.</p>
+            <p>Applying it is simple:</p>
+            <div class="language-kotlin highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code><span class="nd">@NoCoverage</span>
+<span class="kd">data class</span> <span class="nc">GeneratedEntity</span><span class="p">(</span><span class="kd">val</span> <span class="py">id</span><span class="p">:</span> <span class="nc">Int</span><span class="p">,</span> <span class="kd">val</span> <span class="py">name</span><span class="p">:</span> <span class="nc">String</span><span class="p">)</span>
+</code></pre>
+              </div>
+            </div>
+            <p>JaCoCo will skip this class entirely in its coverage calculations.</p>
+            <p><strong>Pros:</strong></p>
             <ul>
-              <li>Easy to use</li>
+              <li>No build configuration changes</li>
               <li>No code generation</li>
+              <li>Exclusion stays co-located with the source it applies to</li>
+              <li>Works correctly across modules and build variants</li>
             </ul>
-            <p>Cons:</p>
+            <p><strong>Cons:</strong></p>
             <ul>
-              <li>Workaround. From JaCoCo Wiki:
+              <li>This is a workaround. The JaCoCo wiki explicitly states:
                 <blockquote>
                   <p>Remark: A Generated annotation should only be used for code actually generated by compilers or tools, never for manual exclusion.</p>
                 </blockquote>
               </li>
-              <li>Useless annotation in prod code. But if you use code obfuscator such as Proguard/Dexguard/R8 (Android) that annotation will be cut out.</li>
+              <li>The annotation is present in the compiled artifact. In Android projects using ProGuard, R8, or DexGuard for release builds, annotations with <code class="language-plaintext highlighter-rouge">BINARY</code> retention are stripped during optimization, so there is no production impact. For projects that do not use code shrinking, the annotation remains in the release artifact but has no runtime effect.</li>
             </ul>
+            <p>In practice, the constraint from the JaCoCo wiki reflects an ideal, not a reality. Large Kotlin projects contain genuinely untestable code — legacy code under business constraints, transitional code mid-refactor, structural code that is correct by construction. Teams need a practical mechanism to handle these cases. The annotation approach provides that mechanism with minimal overhead and maximal clarity at the point of use.</p>
+            <p><em>This article was originally posted on <a href="https://medium.com/@jokuskay/filter-out-classes-from-jacoco-report-using-annotations-a0a44e0d3cc9">Medium</a>.</em></p>
           </div>
           <div id="disqus_thread"></div>
           <script>

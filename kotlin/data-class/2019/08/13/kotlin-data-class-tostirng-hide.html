@@ -7,8 +7,8 @@
     <meta property="og:title" content="Exclude properties from toString() of Kotlin data class (Sekret appx.)" />
     <meta name="author" content="Anatolii Afanasev" />
     <meta property="og:locale" content="en_US" />
-    <meta name="description" content="This post describes how to remove class properties from toString() method manually if you don’t want to use Sekret library." />
-    <meta property="og:description" content="This post describes how to remove class properties from toString() method manually if you don’t want to use Sekret library." />
+    <meta name="description" content="This post describes how to remove class properties from the toString() method manually if you prefer not to use the Sekret compiler plugin." />
+    <meta property="og:description" content="This post describes how to remove class properties from the toString() method manually if you prefer not to use the Sekret compiler plugin." />
     <link rel="canonical" href="https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html" />
     <meta property="og:url" content="https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html" />
     <meta property="og:site_name" content="afanasev.net" />
@@ -17,7 +17,7 @@
     <meta name="twitter:card" content="summary" />
     <meta property="twitter:title" content="Exclude properties from toString() of Kotlin data class (Sekret appx.)" />
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Anatolii Afanasev"},"dateModified":"2019-08-13T08:00:00+00:00","datePublished":"2019-08-13T08:00:00+00:00","description":"This post describes how to remove class properties from toString() method manually if you don’t want to use Sekret library.","headline":"Exclude properties from toString() of Kotlin data class (Sekret appx.)","mainEntityOfPage":{"@type":"WebPage","@id":"https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"},"url":"https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"}
+      {"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Anatolii Afanasev"},"dateModified":"2019-08-13T08:00:00+00:00","datePublished":"2019-08-13T08:00:00+00:00","description":"This post describes how to remove class properties from the toString() method manually if you prefer not to use the Sekret compiler plugin.","headline":"Exclude properties from toString() of Kotlin data class (Sekret appx.)","mainEntityOfPage":{"@type":"WebPage","@id":"https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"},"url":"https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"}
     </script>
     <link rel="stylesheet" href="/assets/main.css">
     <link type="application/atom+xml" rel="alternate" href="https://afanasev.net/feed.xml" title="afanasev.net" />
@@ -54,23 +54,29 @@
               </time></p>
           </header>
           <div class="post-content e-content" itemprop="articleBody">
-            <p><em>This post describes how to remove class properties from <code class="language-plaintext highlighter-rouge">toString()</code> method manually if you don’t want to use <a href="/kotlin-library/2019/08/13/sekret.html">Sekret</a> library.</em></p>
-            <h3 id="1-override-tostring-by-yourself">1. Override toString() by yourself</h3>
-            <p>The simplest way how you can hide sensitive information is overriding <code class="language-plaintext highlighter-rouge">toString</code>. 
-              But it always needs an additional work in every class. What if you want to show other properties? You will have to concatenate strings by yourself.</p>
+            <p><em>This post describes how to remove class properties from the <code class="language-plaintext highlighter-rouge">toString()</code> method manually if you prefer not to use the <a href="/kotlin-library/2019/08/13/sekret.html">Sekret</a> compiler plugin.</em></p>
+            <hr />
+            <p>Kotlin’s data class <code class="language-plaintext highlighter-rouge">toString</code> is generated automatically to include every property defined in the primary constructor. This is convenient for debugging but problematic when some of those properties contain sensitive data — passwords, tokens, PII — that must not appear in logs, crash reports, or analytics pipelines.</p>
+            <p>There is no built-in Kotlin mechanism to exclude a specific field from the generated <code class="language-plaintext highlighter-rouge">toString</code> while keeping it in <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, and <code class="language-plaintext highlighter-rouge">copy</code>. The language does not (yet) offer an annotation equivalent to <code class="language-plaintext highlighter-rouge">@Transient</code> for serialization. The approaches below represent the practical trade-offs available in pure Kotlin, each with distinct implications for class semantics, mutability, and maintainability.</p>
+            <h3 id="1-override-tostring-yourself">1. Override toString() yourself</h3>
+            <p>The most straightforward approach is to manually override <code class="language-plaintext highlighter-rouge">toString</code> in the data class body:</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">Data</span><span class="p">(</span>
     <span class="kd">val</span> <span class="py">login</span><span class="p">:</span> <span class="nc">String</span><span class="p">,</span>
-    <span class="kd">val</span> <span class="py">password</span><span class="p">:</span> <span class="nc">String</span> 
+    <span class="kd">val</span> <span class="py">password</span><span class="p">:</span> <span class="nc">String</span>
 <span class="p">)</span> <span class="p">{</span>
     <span class="k">override</span> <span class="k">fun</span> <span class="nf">toString</span><span class="p">()</span> <span class="p">=</span> <span class="s">""</span>
 <span class="p">}</span>
 </code></pre>
               </div>
             </div>
-            <h3 id="2-define-variable-out-of-data-class">2. Define variable out of Data class</h3>
-            <p>In this case the property won’t be included to any of autogenerated functions of data classes (toString, hashCode, equals, components, etc)</p>
+            <p><strong>What this solves:</strong> Prevents <code class="language-plaintext highlighter-rouge">password</code> from appearing in log output immediately and without adding any new types or indirection.</p>
+            <p><strong>What this breaks:</strong> You have opted out of the entire auto-generated <code class="language-plaintext highlighter-rouge">toString</code>. If you want other properties to appear — <code class="language-plaintext highlighter-rouge">login</code>, for example — you must now construct the string manually. Every time you add a new property to the class, you must remember to update the override. If you forget, the new property will silently never appear in logs, which is often exactly the wrong behavior. The maintenance burden grows proportionally with the class size.</p>
+            <p>It is also worth noting that overriding <code class="language-plaintext highlighter-rouge">toString</code> only affects logging output. The <code class="language-plaintext highlighter-rouge">password</code> field is still fully included in <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and destructuring (<code class="language-plaintext highlighter-rouge">componentN</code>). Those semantics remain intact — which is usually what you want, but is worth understanding clearly.</p>
+            <p><strong>When to use this:</strong> Acceptable for small, stable classes that are unlikely to grow, where the only goal is to suppress all output in logs entirely. For anything more nuanced, the maintenance cost is not worth it.</p>
+            <h3 id="2-define-the-property-outside-the-primary-constructor">2. Define the property outside the primary constructor</h3>
+            <p>Kotlin data class semantics only apply to properties declared in the primary constructor. Properties declared in the class body are excluded from <code class="language-plaintext highlighter-rouge">toString</code>, <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and all <code class="language-plaintext highlighter-rouge">componentN</code> functions:</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">Data</span><span class="p">(</span>
@@ -85,8 +91,12 @@
 </code></pre>
               </div>
             </div>
+            <p><strong>What this solves:</strong> <code class="language-plaintext highlighter-rouge">password</code> is completely invisible to all auto-generated data class functions. It will never appear in <code class="language-plaintext highlighter-rouge">toString</code>, and it does not participate in equality comparisons or <code class="language-plaintext highlighter-rouge">copy()</code>.</p>
+            <p><strong>What this breaks:</strong> The exclusion from <code class="language-plaintext highlighter-rouge">equals</code> and <code class="language-plaintext highlighter-rouge">hashCode</code> changes the object’s identity semantics in a fundamental way. Two <code class="language-plaintext highlighter-rouge">Data</code> instances with the same <code class="language-plaintext highlighter-rouge">login</code> but different passwords are considered equal by the data class. <code class="language-plaintext highlighter-rouge">copy()</code> will produce a new instance without <code class="language-plaintext highlighter-rouge">password</code> copied — setting it to an uninitialized state. If <code class="language-plaintext highlighter-rouge">Data</code> objects are used as keys in maps or stored in sets, or if <code class="language-plaintext highlighter-rouge">copy()</code> is used to produce modified versions, these behaviors may produce subtle bugs.</p>
+            <p>There is also a forced mutability problem: defining a field in the class body requires it to be <code class="language-plaintext highlighter-rouge">var</code> (unless it has a default value). This breaks the immutability of the data class, which is often a core reason for choosing data classes in the first place. Initialization requires a two-step process — construct then set — which makes the class impossible to use in most functional pipelines.</p>
+            <p><strong>When to use this:</strong> When the property genuinely has no place in equality comparisons or copying — for example, a lazily-computed cache value or a transient UI handle. It is a poor fit for actual data fields like passwords.</p>
             <h3 id="3-use-a-wrapper-class">3. Use a wrapper class</h3>
-            <p>This one is more elegant solution but when you create/read a data you will have 1 more level of abstraction.</p>
+            <p>A more principled approach is to wrap the sensitive value in a type whose <code class="language-plaintext highlighter-rouge">toString</code> returns an empty string or a redaction marker:</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="c1">// Wrapper</span>
@@ -105,8 +115,13 @@
 </code></pre>
               </div>
             </div>
-            <h3 id="4-do-not-use-data-classes-_ツ_">4. Do not use Data classes ¯\_(ツ)_/¯</h3>
-            <p>In this case you will not have all advantages of data classes.</p>
+            <p><strong>What this solves:</strong> <code class="language-plaintext highlighter-rouge">password</code> participates fully in all data class semantics — it is included in <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and destructuring. The only thing suppressed is the value in <code class="language-plaintext highlighter-rouge">toString</code>. The original data class structure is preserved, and you get correct <code class="language-plaintext highlighter-rouge">copy()</code> behavior.</p>
+            <p>There is an additional, underappreciated benefit: the type system now makes the sensitivity of this field explicit. When a developer reads the class definition, <code class="language-plaintext highlighter-rouge">Secret&lt;String&gt;</code> signals immediately that this field requires careful handling. It serves as inline documentation that persists through refactors. Code review tools and static analysis can potentially flag any access to <code class="language-plaintext highlighter-rouge">.data</code> on a <code class="language-plaintext highlighter-rouge">Secret</code> instance to ensure it is not being logged unsafely.</p>
+            <p><strong>What this breaks:</strong> Accessing the underlying value requires an extra <code class="language-plaintext highlighter-rouge">.data</code> dereference. This creates a small but consistent friction at every use site. Some developers view this as a drawback; others view it as a feature — friction that makes accidental logging slightly harder. The type is also not directly comparable to a plain <code class="language-plaintext highlighter-rouge">String</code>, which may complicate integration with serialization libraries or frameworks that expect a specific type.</p>
+            <p>A production-quality <code class="language-plaintext highlighter-rouge">Secret&lt;T&gt;</code> implementation should also override <code class="language-plaintext highlighter-rouge">equals</code> and <code class="language-plaintext highlighter-rouge">hashCode</code> to delegate to the wrapped value, ensuring that <code class="language-plaintext highlighter-rouge">Data("login", Secret("a")) != Data("login", Secret("b"))</code> works as expected.</p>
+            <p><strong>When to use this:</strong> The strongest of the manual options. The type-level signal, correct data class semantics, and composability make this a good pattern for codebases that need systematic protection without a compiler plugin.</p>
+            <h3 id="4-do-not-use-data-classes">4. Do not use data classes</h3>
+            <p>Sometimes the right answer is to step back and ask whether a data class was the appropriate choice at all:</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="kd">class</span> <span class="nc">Data</span><span class="p">(</span>
@@ -116,6 +131,13 @@
 </code></pre>
               </div>
             </div>
+            <p>A regular class gives you complete control over <code class="language-plaintext highlighter-rouge">toString</code>, <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, and <code class="language-plaintext highlighter-rouge">copy</code> (or the absence of <code class="language-plaintext highlighter-rouge">copy</code>). There is no auto-generated behavior to work around.</p>
+            <p><strong>When to use this:</strong> When the class does not actually need the semantics of a data class — no structural equality comparisons, no destructuring, no <code class="language-plaintext highlighter-rouge">copy()</code> calls. If the class is used only as a container passed through a pipeline and never compared or copied, the data class overhead (and the <code class="language-plaintext highlighter-rouge">toString</code> problem) may be unnecessary. Choosing a regular class in this case is not a workaround — it is the appropriate design decision.</p>
+            <hr />
+            <h2 id="the-underlying-problem-with-all-four-approaches">The Underlying Problem with All Four Approaches</h2>
+            <p>Each of the options above requires the developer to actively remember to protect every sensitive field, in every class, at every point in the class’s lifetime. They are all opt-in: the default behavior is to expose everything.</p>
+            <p>This creates a systematic risk. As classes evolve — new fields added, existing fields renamed — the protection must be consciously re-applied. A developer unfamiliar with the codebase’s conventions, or working under time pressure, will produce a class that leaks by default.</p>
+            <p>The <a href="/kotlin-library/2019/08/13/sekret.html">Sekret</a> compiler plugin addresses this at the root: protection is declared once per field with an annotation, and the compiler enforces it permanently. The annotation travels with the field through refactors, class renames, and codebase migrations. No manual <code class="language-plaintext highlighter-rouge">toString</code> override to maintain, no wrapper type to thread through the codebase — just a single annotation that expresses intent and delegates enforcement to the compiler.</p>
           </div>
           <div id="disqus_thread"></div>
           <script>

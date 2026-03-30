@@ -55,8 +55,10 @@
           </header>
           <div class="post-content e-content" itemprop="articleBody">
             <h2 id="problem">Problem</h2>
-            <p>Kotlin compiler automatically generates equals, hashCode, componentN, copy and <strong>toString</strong> functions for Data classes. It’s super useful because you as a developer don’t have to spend time on writing boilerplate code and testing. But there is one problem (at least for me) — a result of toString() will contain all properties of Data class.</p>
-            <p>Let me explain why it can be a problem. For example in Android development, if you use MVI pattern, Views tend to have a single render() that accepts a state to render on the screen:</p>
+            <p>One of Kotlin’s most appreciated features is the data class. With a single keyword, the compiler automatically generates <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, <code class="language-plaintext highlighter-rouge">componentN</code>, and <code class="language-plaintext highlighter-rouge">toString</code> — eliminating an entire category of boilerplate that Java developers had to write and maintain by hand. For domain objects, value types, and state containers, data classes are the obvious choice.</p>
+            <p>The <code class="language-plaintext highlighter-rouge">toString</code> function, in particular, is invaluable for debugging. When you log a data class instance, you get a complete, readable snapshot of its state: every field name and value, formatted cleanly. This is exactly what you want during development.</p>
+            <p>In production, it becomes a liability.</p>
+            <p>Consider a typical MVI (Model-View-Intent) architecture, where a view receives a single state object containing everything it needs to render:</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">ViewState</span><span class="p">(</span>
@@ -69,7 +71,7 @@
 </code></pre>
               </div>
             </div>
-            <p>Great, now you may want to add some logging system to able to understand what your customer’s behavior or what they have seen before a crash or for just debugging purpose:</p>
+            <p>Adding observability to this pattern is natural and encouraged:</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="k">fun</span> <span class="nf">render</span><span class="p">(</span><span class="n">viewState</span><span class="p">:</span> <span class="nc">ViewState</span><span class="p">)</span> <span class="p">{</span>
@@ -79,10 +81,36 @@
 </code></pre>
               </div>
             </div>
-            <p>Logger class can use Log.d() internally and just prints on *logcat. *Or it can be your own analytics system which sends data to web or just saves in files. It can even be Google Analytics, Crashlytics.log or any other 3rd party vendor. Your application can be a reason for PII, passwords, credit card info or any other sensitive data leakage. I agree that the logging system should be much smarter than just saving everything and everywhere.</p>
-            <p>It’s not only about Android, but it can also be an issue everywhere especially on microservices architecture where every component is independent and logs all in / out data. It can happen in Repository with sealed class results + data classes, Actions from View to Presenter, State of StateMachine, etc…</p>
-            <h2 id="solution">Solution</h2>
-            <p>There are <a href="/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html">many ways</a> how we can exclude our properties from toString() result. But all of them needs manual work. Since developers are lazy I’ve implemented a tool which helps with this. <strong>Sekret</strong> is Kotlin compiler plugin which changes generated Java bytecode of toString() method during the compilation process. You just need to annotate your property with a special annotation and that’s it!</p>
+            <p>When <code class="language-plaintext highlighter-rouge">logger.info</code> calls <code class="language-plaintext highlighter-rouge">viewState.toString()</code>, it produces something like:</p>
+            <div class="language-plaintext highlighter-rouge">
+              <div class="highlight">
+                <pre class="highlight"><code>ViewState(username=james.bond, password=123456, isButtonEnabled=true)
+</code></pre>
+              </div>
+            </div>
+            <p>That string now flows wherever your logger sends data — <code class="language-plaintext highlighter-rouge">logcat</code>, crash reporters, analytics SDKs, remote log aggregation services, third-party monitoring platforms. Every system that receives your logs now receives your users’ passwords.</p>
+            <p>This is not a hypothetical risk. It is a concrete, reproducible data pipeline from your application to third-party servers, with your users’ sensitive data flowing through it on every state change.</p>
+            <h2 id="the-scope-of-the-problem">The Scope of the Problem</h2>
+            <p>The data leakage vector extends well beyond Android’s MVI pattern. Any architecture that uses data classes as data containers and logs those containers is affected:</p>
+            <ul>
+              <li><strong>Crash reporters</strong> (Crashlytics, Sentry, Bugsnag) allow you to attach context objects to crash reports. If that context is a data class, its full contents — including sensitive fields — appear in the crash report.</li>
+              <li><strong>Analytics pipelines</strong> frequently serialize events and their associated state for processing. Data classes are natural event payloads.</li>
+              <li><strong>Microservice architectures</strong> often log all incoming and outgoing messages for observability. If your message types are data classes, every request and response is fully exposed in your log infrastructure.</li>
+              <li><strong>Repository pattern</strong> with sealed class results: <code class="language-plaintext highlighter-rouge">Result.Success(data = userProfile)</code> — logging the result logs the entire user profile.</li>
+              <li><strong>State machines</strong> logging every state transition: each logged state includes every field.</li>
+            </ul>
+            <p>The common thread: modern logging practices encourage comprehensive observability. Data classes make it trivial to log anything. The intersection of the two creates a systematic PII (Personally Identifiable Information) exfiltration risk.</p>
+            <h2 id="regulatory-consequences">Regulatory Consequences</h2>
+            <p>This is not just a best-practice concern. Under GDPR (General Data Protection Regulation) in the European Union, logging personal data — names, email addresses, passwords, health information, financial data — without a legitimate legal basis and appropriate technical controls can result in fines of up to €20 million or 4% of global annual revenue, whichever is higher. CCPA (California Consumer Privacy Act) carries similar obligations in the US. PCI DSS requirements explicitly prohibit logging cardholder data.</p>
+            <p>The challenge is that these leaks are silent. There is no exception, no warning, no test failure. The data simply flows into log storage, where it may sit unnoticed for months or years.</p>
+            <h2 id="existing-workarounds-and-their-limitations">Existing Workarounds and Their Limitations</h2>
+            <p>There are <a href="/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html">several manual approaches</a> to excluding sensitive fields from <code class="language-plaintext highlighter-rouge">toString</code>. Each requires the developer to actively remember to protect every sensitive field, in every class, every time a class is modified.</p>
+            <p>Overriding <code class="language-plaintext highlighter-rouge">toString</code> entirely is the simplest approach but introduces a maintenance burden: every new property addition requires manually updating the override. Miss one update after a refactor and you have reintroduced the leak.</p>
+            <p>Wrapper types (<code class="language-plaintext highlighter-rouge">Secret&lt;T&gt;</code>) are more principled but require changing the field type, which affects the API surface, copy() calls, and any serialization configuration.</p>
+            <p>Defining fields outside the primary constructor removes them from all data class semantics, but forces mutability and changes equality semantics — two <code class="language-plaintext highlighter-rouge">Data</code> instances with different passwords compare as equal.</p>
+            <p>All of these approaches share a fundamental weakness: they are opt-in. The default behavior leaks. A developer who does not know about the risk, or forgets to apply the protection to a new field, produces a vulnerable class with no warning from the compiler.</p>
+            <h2 id="solution-a-compiler-plugin">Solution: A Compiler Plugin</h2>
+            <p><strong>Sekret</strong> is a Kotlin compiler plugin that modifies the generated <code class="language-plaintext highlighter-rouge">toString</code> bytecode for annotated fields during compilation. Instead of writing manual overrides or restructuring your data classes, you annotate individual sensitive fields with <code class="language-plaintext highlighter-rouge">@Secret</code>:</p>
             <div class="language-kotlin highlighter-rouge">
               <div class="highlight">
                 <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">Data</span><span class="p">(</span>
@@ -97,8 +125,18 @@
 </code></pre>
               </div>
             </div>
-            <p>More info on Github: <a href="https://github.com/aafanasev/sekret">https://github.com/aafanasev/sekret</a></p>
-            <p>Perhaps JetBrains will allow changing toString() body with an out-of-box solution like Transient annotation for serialization.</p>
+            <p>The password field is replaced with a redaction marker (<code class="language-plaintext highlighter-rouge">■■■</code>) in the output. Every other field continues to appear normally. The data class retains all its semantic properties — <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and <code class="language-plaintext highlighter-rouge">componentN</code> all include the password field as expected. Only <code class="language-plaintext highlighter-rouge">toString</code> is modified, and only for annotated fields.</p>
+            <h2 id="how-the-compiler-plugin-works">How the Compiler Plugin Works</h2>
+            <p>Building a Kotlin compiler plugin requires working at a level most Kotlin developers never encounter. The Kotlin compilation pipeline processes source code through several stages: parsing into a PSI (Program Structure Interface) tree, type-checking and resolution, translation to an IR (Intermediate Representation) tree, and finally code generation to JVM bytecode.</p>
+            <p>Sekret hooks into the IR stage. When the compiler generates the IR for a data class <code class="language-plaintext highlighter-rouge">toString</code> method, the plugin inspects the fields included in the generated implementation, identifies those annotated with <code class="language-plaintext highlighter-rouge">@Secret</code>, and rewrites the IR nodes responsible for appending those field values — replacing the value reference with a constant redaction string.</p>
+            <p>The result is identical to what you would get if you had hand-written <code class="language-plaintext highlighter-rouge">toString</code> to exclude the field, but it is generated automatically, stays in sync with the class definition as it evolves, and requires zero manual intervention after the initial annotation.</p>
+            <p>Critically, this is a <strong>compile-time transformation with no runtime overhead</strong>. The generated bytecode is as efficient as a hand-written <code class="language-plaintext highlighter-rouge">toString</code>. There is no reflection, no proxy, no wrapper object allocated per invocation.</p>
+            <h2 id="design-philosophy">Design Philosophy</h2>
+            <p>The <code class="language-plaintext highlighter-rouge">@Secret</code> annotation approach is deliberately declarative and self-documenting. When a code reviewer sees a field annotated with <code class="language-plaintext highlighter-rouge">@Secret</code>, the intent is immediately clear: this field contains sensitive data that must not appear in logs. The annotation serves double duty as both a functional directive and inline documentation.</p>
+            <p>This is the same philosophy behind <code class="language-plaintext highlighter-rouge">@Transient</code> for serialization — you annotate the field to opt out of a default behavior, rather than restructuring the class. Kotlin’s standard library already uses this pattern for serialization; Sekret brings it to <code class="language-plaintext highlighter-rouge">toString</code>.</p>
+            <p>The protection is also future-proof. Once a field is annotated, it remains protected regardless of how the surrounding class evolves. New fields added to the class appear in <code class="language-plaintext highlighter-rouge">toString</code> as normal. The annotated field never does.</p>
+            <p>More info on GitHub: <a href="https://github.com/aafanasev/sekret">https://github.com/aafanasev/sekret</a></p>
+            <p>Perhaps JetBrains will eventually offer an out-of-box solution similar to the <code class="language-plaintext highlighter-rouge">@Transient</code> annotation for serialization — a standard way to exclude fields from the compiler-generated <code class="language-plaintext highlighter-rouge">toString</code>. Until then, Sekret fills that gap.</p>
             <p><em>This article was originally posted on <a href="https://medium.com/@jokuskay/how-to-exclude-properties-from-tostring-of-kotlin-data-classes-f8dc04b8c45e">Medium</a>.</em></p>
           </div>
           <div id="disqus_thread"></div>

@@ -1,9 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://afanasev.net/feed.xml" rel="self" type="application/atom+xml" /><link href="https://afanasev.net/" rel="alternate" type="text/html" /><updated>2025-07-22T05:37:43+00:00</updated><id>https://afanasev.net/feed.xml</id><title type="html">afanasev.net</title><subtitle>Boring coding</subtitle><author><name>Anatolii Afanasev</name></author><entry><title type="html">Implement your own in-house Crashlytics for Android</title><link href="https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html" rel="alternate" type="text/html" title="Implement your own in-house Crashlytics for Android" /><published>2020-04-23T16:18:12+00:00</published><updated>2020-04-23T16:18:12+00:00</updated><id>https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics</id><content type="html" xml:base="https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html"><![CDATA[<h2 id="why">Why</h2>
-      <p>We’ve been using Crashlytics by Fabric for many years in our company. When Google have acquired Fabric and asked Crashlytics users to migrate to Firebase, we started thinking what can happen with Crashlytics: will it require Play Services as other Firebase tools do (e.g. Firebase App Distribution), will it work in China (huge market for us), etc.</p>
-      <p>Actually, above situation was one of many reasons why we decided to implement our own crash catcher system. Having crash information in your own database opens a lot of opportunities. We do a lot of A/B testing, all new features are covered by feature flags, remote configurations, etc. Using the crash info such as a filename, line number we can identify which feature/experiment causes this crash and automatically &amp; remotely turn it off. This is just one use case. We can identify what team or developer this file or change belongs to using <code class="language-plaintext highlighter-rouge">git blame</code> and automatically <del>fire</del> notify them. Or even train ML models using all collected crashes. Let’s just imagine, you got a crash and in a minite you received an email with PR that fixes the crash. Infinite opportunities.</p>
-      <p>To be fair, we can acrhieve all things we imagined using Google’s BigQuery to export data from Firebase Crashlytics. But it’s not real-time and not free. Other libraries we didn’t like for one reason or another. We’d like to have 100% control.</p>
-      <h2 id="how">How</h2>
-      <p>Android (excluding JNI) is the easiest part of this huge system. Backend will be deobfuscating (proguard, R8), saving, analyzing, showing, notifying, etc. On client side, we should just catch exceptions and send them to the backend side. In order to do that, we must use <code class="language-plaintext highlighter-rouge">setDefaultUncaughtExceptionHandler</code> method of <code class="language-plaintext highlighter-rouge">Thread</code> class. Do not forget to “save” previously set handler and pass caught data to it once we’re done. Otherwise, Android won’t kill the process.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.4.1">Jekyll</generator><link href="https://afanasev.net/feed.xml" rel="self" type="application/atom+xml" /><link href="https://afanasev.net/" rel="alternate" type="text/html" /><updated>2026-03-30T05:16:04+00:00</updated><id>https://afanasev.net/feed.xml</id><title type="html">afanasev.net</title><subtitle>Boring coding</subtitle><author><name>Anatolii Afanasev</name></author><entry><title type="html">Implement your own in-house Crashlytics for Android</title><link href="https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html" rel="alternate" type="text/html" title="Implement your own in-house Crashlytics for Android" /><published>2020-04-23T16:18:12+00:00</published><updated>2020-04-23T16:18:12+00:00</updated><id>https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics</id><content type="html" xml:base="https://afanasev.net/android/crashlytics/2020/04/23/in-house-crashlytics.html"><![CDATA[<h2 id="why">Why</h2>
+      <p>For years, Crashlytics by Fabric was the gold standard for mobile crash reporting. It was fast, reliable, deeply integrated with Android tooling, and free. Teams adopted it without hesitation, and it became load-bearing infrastructure for mobile development at companies of every size.</p>
+      <p>Then Google acquired Fabric.</p>
+      <p>The migration from Fabric Crashlytics to Firebase Crashlytics was manageable for many teams, but it immediately raised a set of questions we could not get clear answers to. Firebase tools, as a rule, depend on Google Play Services — a hard requirement that excludes Huawei devices running HMS (Huawei Mobile Services) and the Chinese Android ecosystem more broadly, where GMS is not available. China represented a significant portion of our user base, and the prospect of running two parallel crash reporting systems — one for GMS markets, one for HMS — was operationally unappealing.</p>
+      <p>Beyond the immediate practicalities, the acquisition surfaced a deeper concern: our crash reporting infrastructure was entirely controlled by a third party whose roadmap we could not influence and whose business decisions could affect our operations at any time. We had already lived through one such decision.</p>
+      <p>These concerns, taken together, pointed toward building our own crash reporting system.</p>
+      <h2 id="the-strategic-case-for-ownership">The Strategic Case for Ownership</h2>
+      <p>The defensive argument for building in-house crash reporting — vendor independence, market coverage — was sufficient on its own. But the more compelling argument was what becomes possible when you own the data pipeline end to end.</p>
+      <p>Crash data contains rich, structured information: the file, the class, the line number, the thread state, the stack at the moment of failure. In our system, we could connect this information directly to our existing infrastructure:</p>
+      <p><strong>Automated incident response</strong>: Every crash has a filename and line number. Our codebase is managed in Git. Using <code class="language-plaintext highlighter-rouge">git blame</code>, we can map any crash directly to the commit that introduced the failing code and the team responsible for it. An automated system can open a ticket, notify the relevant team, or even trigger a rollback — without human intervention.</p>
+      <p><strong>Feature flag integration</strong>: Our release process is built around feature flags and A/B tests. A new feature is always behind a flag before it is fully rolled out. When a crash occurs in a flagged feature, we can identify the flag from the source location and automatically disable it, preventing further exposure to the crashing code path. This closes the loop from crash detection to crash mitigation without a human on-call cycle.</p>
+      <p><strong>Developer attribution and accountability</strong>: The <code class="language-plaintext highlighter-rouge">git blame</code> pipeline also enables precise attribution. The system can automatically notify the developer whose commit introduced a crash within minutes of the first occurrence in production — far faster than any manual triage process.</p>
+      <p><strong>ML-assisted root cause analysis</strong>: With full ownership of crash data and the infrastructure to process it, training models to identify crash-prone patterns, predict regression risk from code changes, or cluster related crashes by root cause becomes tractable. The vision of receiving a suggested fix within minutes of a crash is not science fiction; it requires data ownership as a prerequisite.</p>
+      <p>To be fair, some of this is achievable using Firebase Crashlytics data exported to BigQuery. But BigQuery export introduces latency measured in hours, not seconds. For real-time incident response, that latency is disqualifying. And the China market problem remains regardless.</p>
+      <h2 id="how-the-android-client">How: The Android Client</h2>
+      <p>The Android client side of a crash reporting system is simpler than the backend. The backend handles the hard problems: deobfuscating stack traces from ProGuard/R8 symbol maps, deduplication, aggregation, alerting, and visualization. The Android client has one job: reliably capture exceptions and ensure they reach the backend.</p>
+      <h3 id="registering-the-exception-handler">Registering the Exception Handler</h3>
+      <p>Java and Android provide a standard mechanism for catching unhandled exceptions: <code class="language-plaintext highlighter-rouge">Thread.setDefaultUncaughtExceptionHandler</code>. This handler is invoked for any exception that propagates to the top of a thread’s call stack without being caught:</p>
       <div class="language-kotlin highlighter-rouge">
         <div class="highlight">
           <pre class="highlight"><code><span class="kd">val</span> <span class="py">defaultHandler</span> <span class="p">=</span> <span class="nc">Thread</span><span class="p">.</span><span class="nf">getDefaultUncaughtExceptionHandler</span><span class="p">()</span>
@@ -18,8 +30,18 @@
 </code></pre>
         </div>
       </div>
-      <p>This code can be called from <code class="language-plaintext highlighter-rouge">Application#onCreate()</code> or <code class="language-plaintext highlighter-rouge">ContentProvider</code> which is called even earlier.</p>
-      <p><code class="language-plaintext highlighter-rouge">CrashLogger</code> interface might look like this. We have to save stacktrace somewhere locally and next app launch it’s need to be sent to the server. We can’t immediatelly make network call once we caught a crash because it will be too slow.</p>
+      <p>Two details here are critical for correctness:</p>
+      <p>First, save the existing default handler before replacing it, and call it in a <code class="language-plaintext highlighter-rouge">finally</code> block after your own handler runs. The default handler is responsible for terminating the process, producing the system crash dialog, and notifying the Android runtime. If you replace it without delegating to it, the process will not terminate normally, producing strange behavior and potentially causing subsequent launches to appear in a non-crashed state.</p>
+      <p>Second, the <code class="language-plaintext highlighter-rouge">finally</code> block ensures the default handler is called even if your own crash logging throws an exception — which is possible if the application is in a severely degraded state.</p>
+      <p>This setup code can be placed in <code class="language-plaintext highlighter-rouge">Application#onCreate()</code>. For applications where early-lifecycle crashes are a concern, a <code class="language-plaintext highlighter-rouge">ContentProvider</code> initialized before <code class="language-plaintext highlighter-rouge">Application#onCreate()</code> can be used to register the handler even earlier in the process startup sequence.</p>
+      <h3 id="why-you-cannot-make-a-network-call-immediately">Why You Cannot Make a Network Call Immediately</h3>
+      <p>The instinct when catching a crash is to send it to the backend immediately. This does not work reliably, for three reasons:</p>
+      <ol>
+        <li><strong>The process is about to die.</strong> The uncaught exception handler runs immediately before process termination. Any async work started in the handler — a network request, for example — will be killed before it completes.</li>
+        <li><strong>The main thread may be unresponsive.</strong> If the crash occurred on the main thread, the UI event loop is no longer running. Network libraries that dispatch callbacks to the main thread will silently fail.</li>
+        <li><strong>The heap may be exhausted.</strong> Some crashes are caused by <code class="language-plaintext highlighter-rouge">OutOfMemoryError</code>. Attempting to allocate new objects for a network request in this state will fail immediately.</li>
+      </ol>
+      <p>The correct pattern is a two-phase approach: save the crash locally during the crash handler, then send it to the backend on the next application launch, after the process has restarted cleanly and the network stack is fully operational.</p>
       <div class="language-kotlin highlighter-rouge">
         <div class="highlight">
           <pre class="highlight"><code><span class="kd">interface</span> <span class="nc">CrashLogger</span> <span class="p">{</span>
@@ -31,7 +53,10 @@
 </code></pre>
         </div>
       </div>
-      <p>Easy way of converting throwable stacktrace to string:</p>
+      <p><strong>FileCrashLogger</strong> writes the crash as plain text to a file. It has minimal dependencies and is unlikely to fail during a crash — even if the application heap is under pressure, writing a small file to disk does not require significant allocation.</p>
+      <p><strong>SqliteCrashLogger</strong> writes to a SQLite database. This enables structured queries on crash history (useful if you want to deduplicate on the client), atomic writes, and easier enumeration of pending crashes. The trade-off is that SQLite itself is a complex system; if the crash was caused by database corruption or if SQLite’s own thread pool is in a bad state, the logger may fail. For maximum reliability in crash scenarios, file storage is safer.</p>
+      <h3 id="capturing-the-stack-trace">Capturing the Stack Trace</h3>
+      <p>Converting a <code class="language-plaintext highlighter-rouge">Throwable</code> to a string for storage is straightforward:</p>
       <div class="language-kotlin highlighter-rouge">
         <div class="highlight">
           <pre class="highlight"><code><span class="kd">val</span> <span class="py">sw</span> <span class="p">=</span> <span class="nc">StringWriter</span><span class="p">()</span>
@@ -40,7 +65,7 @@
 </code></pre>
         </div>
       </div>
-      <p>If you want to get all stacktraces from all threads:</p>
+      <p>For comprehensive diagnostics, capturing the state of all threads at the moment of the crash can be invaluable — particularly for diagnosing deadlocks, thread contention, or crashes caused by interactions between background work and the main thread:</p>
       <div class="language-kotlin highlighter-rouge">
         <div class="highlight">
           <pre class="highlight"><code><span class="kd">val</span> <span class="py">stackTraces</span> <span class="p">=</span> <span class="n">mutableMapOf</span><span class="p">&lt;</span><span class="nc">String</span><span class="p">,</span> <span class="nc">String</span><span class="p">&gt;()</span>
@@ -66,7 +91,7 @@
 </code></pre>
         </div>
       </div>
-      <p>If you’d like to know only minimum information you can use the code below:</p>
+      <p>For use cases where only the crash origin matters — for example, to look up the associated feature flag or git blame entry — the minimal form is sufficient:</p>
       <div class="language-kotlin highlighter-rouge">
         <div class="highlight">
           <pre class="highlight"><code><span class="n">throwable</span><span class="p">.</span><span class="n">stackTrace</span><span class="o">?.</span><span class="nf">firstOrNull</span><span class="p">()</span><span class="o">?.</span><span class="nf">let</span> <span class="p">{</span> <span class="n">crash</span> <span class="p">-&gt;</span>
@@ -77,18 +102,44 @@
 </code></pre>
         </div>
       </div>
-      <p>Remember, <code class="language-plaintext highlighter-rouge">Throwable#getStackTrace()</code> method can return an empty array if <code class="language-plaintext highlighter-rouge">writableStackTrace</code> flag is false (e.g. <code class="language-plaintext highlighter-rouge">ArithmeticException</code>).</p>
-      <p><em>NOTE: This code is just a sample. If you really want to create your own Crashlytics and make it production ready there are many things to keep in mind, at least Multi processes, JNI (if you use it).</em></p>
-      ]]></content><author><name>Anatolii Afanasev</name></author><category term="android" /><category term="crashlytics" /><summary type="html"><![CDATA[Why]]></summary></entry><entry><title type="html">Filter out classes from JaCoCo report using annotaitons</title><link href="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" rel="alternate" type="text/html" title="Filter out classes from JaCoCo report using annotaitons" /><published>2020-04-10T09:26:00+00:00</published><updated>2020-04-10T09:26:00+00:00</updated><id>https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation</id><content type="html" xml:base="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html"><![CDATA[<p style="text-align: center;"><img src="/assets/img/jacoco-code-coverage.png" alt="JaCoCo code coverate report with Generated annotation" /></p>
+      <p>One production edge case worth handling: <code class="language-plaintext highlighter-rouge">Throwable#getStackTrace()</code> can return an empty array. This occurs when the <code class="language-plaintext highlighter-rouge">Throwable</code> was constructed with <code class="language-plaintext highlighter-rouge">writableStackTrace = false</code> — a legitimate optimization sometimes used for exception types where stack traces are never needed (certain <code class="language-plaintext highlighter-rouge">ArithmeticException</code> subclasses, for example). A null or empty check guards against <code class="language-plaintext highlighter-rouge">firstOrNull()</code> returning null in this case.</p>
+      <h2 id="what-this-system-does-not-cover">What This System Does Not Cover</h2>
+      <p>This article covers the Android client component. A production-ready system requires substantially more:</p>
+      <ul>
+        <li><strong>Symbol map management</strong>: ProGuard and R8 obfuscate class and method names in release builds. The backend must maintain a mapping from obfuscated names back to source symbols, keyed by build version, and apply it to every incoming crash report.</li>
+        <li><strong>Multi-process apps</strong>: Android applications can run in multiple processes (services, remote processes, etc.). The uncaught exception handler must be registered separately in each process. A <code class="language-plaintext highlighter-rouge">ContentProvider</code> that performs registration in its <code class="language-plaintext highlighter-rouge">onCreate</code> is a clean way to ensure this happens automatically.</li>
+        <li><strong>JNI crashes</strong>: Native crashes in JNI code are not captured by <code class="language-plaintext highlighter-rouge">Thread.setDefaultUncaughtExceptionHandler</code>. Native crash handling requires separate mechanisms (signal handlers, breakpad, or Firebase Crashlytics’s native SDK).</li>
+        <li><strong>ANR detection</strong>: Application Not Responding errors are a distinct failure mode from exceptions. Detecting them requires a separate watchdog mechanism — typically a background thread that monitors main thread responsiveness.</li>
+      </ul>
+      <p>The client-side implementation described here is intentionally minimal — a foundation on which a full crash reporting pipeline can be built. The interesting and difficult problems live in the backend and the integration layer, but they all depend on this foundation being correct and reliable.</p>
+      <p><em>NOTE: This code is a sample. If you want to make a production-ready system, there are many additional considerations beyond what is covered here.</em></p>
+      ]]></content><author><name>Anatolii Afanasev</name></author><category term="android" /><category term="crashlytics" /><summary type="html"><![CDATA[Why]]></summary></entry><entry><title type="html">Filter out classes from JaCoCo report using annotaitons</title><link href="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html" rel="alternate" type="text/html" title="Filter out classes from JaCoCo report using annotaitons" /><published>2020-04-10T09:26:00+00:00</published><updated>2020-04-10T09:26:00+00:00</updated><id>https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation</id><content type="html" xml:base="https://afanasev.net/kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html"><![CDATA[<p style="text-align: center;"><img src="/assets/img/jacoco-code-coverage.png" alt="JaCoCo code coverage report with Generated annotation" /></p>
     <h2 id="story">Story</h2>
-    <p>(can be skipped)</p>
-    <p>Long time ago in our company, we decided to use code coverage level as one of the must requirements to merge PR into <code class="language-plaintext highlighter-rouge">develop</code> branch. We have automated merge bot which automatically merges if the branch meets all requirements. We came up with magic number <code class="language-plaintext highlighter-rouge">80%</code>, so every new/modified class must be covered by Unit tests as minimum 80%.</p>
-    <p><em>There are many discussions about code coverage, 80%, JaCoCo, etc. This article is not about that.</em></p>
-    <p>We were happy with this requirement. Teams started to write more testable code, think about architecture, app stability went up, etc. We understood it’s impossible to cover all classes in our project, there are many reasons: legacy code (lots of LOC need to be refactored; Business just won’t give time for that; “if it works don’t touch!”), auto-generated code (why we need to test 3rd party libs, etc), some code frankly does not need to be tested. Therefore, we need a way to filter out specific classes from JaCoCo report and allow devs/tools to merge branches.</p>
-    <p>Even more problems started to appear after moving to Kotlin from Java. JaCoCo, as you may know, works as java-agent with java bytecode only. Kotlin is a great language which reduced boilerplate code a lot but underhood the hood (in case of JVM) it generates a lot of helper methods, lines of code. For example, data class becomes a class with auto-generated methods such as <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">component1</code>, etc; even one line of code like <code class="language-plaintext highlighter-rouge">s?.foo()</code> or just <code class="language-plaintext highlighter-rouge">s.foo()</code> (where <code class="language-plaintext highlighter-rouge">s</code> defined as <code class="language-plaintext highlighter-rouge">lateinit</code>) will have 1 <code class="language-plaintext highlighter-rouge">if</code> in the generated code. Obviuosly, we do not have to test the generated code. All this generated stuff dramatically decreased our code coverage numbers. Keep in mind, those numbers can be KPI for some teams (yeah, bloody enterprise…).</p>
-    <h2 id="ideas">Ideas</h2>
-    <h4 id="1-custom-gradle-task-with-filter">1. Custom Gradle task with filter</h4>
-    <p>This way is suitable for most teams. Create a task using <code class="language-plaintext highlighter-rouge">JacocoReport</code> and make it depend on <code class="language-plaintext highlighter-rouge">test</code> &amp; <code class="language-plaintext highlighter-rouge">generate report</code> tasks. Then define an array of classes that you want to ignore and pass it as <code class="language-plaintext highlighter-rouge">excludes</code> parameter of <code class="language-plaintext highlighter-rouge">fileTree</code> method.</p>
+    <p>Engineering culture at scale is difficult to build and even harder to maintain. In our company, we made a deliberate decision to enforce code coverage as a merge requirement — a hard gate on the CI pipeline that prevented branches from being merged unless they met a minimum threshold. We chose 80%: every new or modified class had to be covered by unit tests to at least that level.</p>
+    <p><em>There are many debates about what the right coverage threshold is, whether coverage is a useful metric at all, and how to avoid gaming it. This article is not about that.</em></p>
+    <p>The policy had real effects. Teams began writing more testable code. Architecture improved — highly coupled, untestable code tends to resist coverage requirements in ways that become impossible to ignore. App stability measurably increased. The discipline around testing became part of how we worked, not an afterthought.</p>
+    <p>But we quickly discovered a class of code that was untestable not through neglect or poor design, but by its nature:</p>
+    <ul>
+      <li><strong>Legacy code</strong> with deeply tangled dependencies, thousands of lines that would require months of refactoring before tests could be written — refactoring that the business would not prioritize because “it works”</li>
+      <li><strong>Auto-generated code</strong> — output from annotation processors, AIDL interface bindings, generated Room DAOs, Dagger components — code that is correct by construction and pointless to re-test</li>
+      <li><strong>Delegating code</strong> that exists only to forward calls and has no logic to verify</li>
+    </ul>
+    <p>These classes needed to be excluded from coverage calculations so that teams could meet the threshold on the code they actually owned and controlled.</p>
+    <p>Then we migrated from Java to Kotlin, and the problem became significantly more complex.</p>
+    <h2 id="the-kotlin-bytecode-problem">The Kotlin Bytecode Problem</h2>
+    <p>JaCoCo operates at the bytecode level. It instruments compiled <code class="language-plaintext highlighter-rouge">.class</code> files by injecting probes that track which lines and branches have been executed. This works reliably for Java code, where the relationship between source lines and bytecode is relatively straightforward.</p>
+    <p>Kotlin is different. The language is designed to eliminate boilerplate, and it achieves this by having the compiler generate significant amounts of bytecode from compact source constructs. A few examples:</p>
+    <ul>
+      <li>A simple <code class="language-plaintext highlighter-rouge">data class</code> with three fields generates <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">toString</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and three <code class="language-plaintext highlighter-rouge">componentN</code> functions — all as fully-realized bytecode methods that JaCoCo counts independently.</li>
+      <li>A safe call <code class="language-plaintext highlighter-rouge">s?.foo()</code> compiles to a null check (<code class="language-plaintext highlighter-rouge">if</code>/<code class="language-plaintext highlighter-rouge">else</code> branch in bytecode), even though there is no explicit conditional in the source.</li>
+      <li>A <code class="language-plaintext highlighter-rouge">lateinit var</code> field access generates a null check that appears as an uncovered branch if the test path never triggers the uninitialized case.</li>
+      <li>Companion objects, object declarations, and sealed class subclasses all generate additional bytecode scaffolding.</li>
+    </ul>
+    <p>The result: coverage numbers for Kotlin projects are systematically lower than the source code suggests. A data class that any developer would consider fully tested — constructors called, methods invoked — shows gaps because JaCoCo is counting generated bytecode that has no corresponding source line for tests to exercise. For a large Kotlin project, this distortion can move the effective coverage percentage by 5–15 points.</p>
+    <p>When coverage is a KPI, or when it gates merges in an automated pipeline, that distortion has real consequences.</p>
+    <h2 id="approaches-we-explored">Approaches We Explored</h2>
+    <h3 id="1-custom-gradle-task-with-filename-filters">1. Custom Gradle task with filename filters</h3>
+    <p>The standard approach, and the first thing any team discovers when searching for this problem, is to define an exclusion list in the <code class="language-plaintext highlighter-rouge">JacocoReport</code> Gradle task:</p>
     <div class="language-groovy highlighter-rouge">
       <div class="highlight">
         <pre class="highlight"><code><span class="n">task</span> <span class="nf">jacocoTestReport</span><span class="o">(</span><span class="nl">type:</span> <span class="n">JacocoReport</span><span class="o">,</span> <span class="nl">dependsOn:</span> <span class="o">[...])</span> <span class="o">{</span>
@@ -99,7 +150,7 @@
     <span class="o">]</span>
 
     <span class="kt">def</span> <span class="n">debugTree</span> <span class="o">=</span> <span class="n">fileTree</span><span class="o">(</span>
-        <span class="nl">dir:</span> <span class="s2">"${buildDir}/intermediates/classes/debug"</span><span class="o">,</span> 
+        <span class="nl">dir:</span> <span class="s2">"${buildDir}/intermediates/classes/debug"</span><span class="o">,</span>
         <span class="nl">excludes:</span> <span class="n">fileFilter</span> <span class="c1">// &lt;-- exclude listed classes</span>
     <span class="o">)</span>
 
@@ -110,31 +161,23 @@
 </code></pre>
       </div>
     </div>
-    <p>Pros:</p>
-    <ul>
-      <li>All ignored classes in 1 place</li>
-    </ul>
-    <p>Cons:</p>
-    <ul>
-      <li>Easy to make a mistake. One day we have found a rule <code class="language-plaintext highlighter-rouge">**/R*.class</code> which supposed to filter out <code class="language-plaintext highlighter-rouge">R</code> class &amp; nested classes (known by every Android developer) but JaCoCo was ignoring all classes started with <code class="language-plaintext highlighter-rouge">R</code> :)</li>
-    </ul>
-    <h4 id="2-annotation-processor">2. Annotation processor</h4>
-    <p>Since all developers are lazy and we rather spend 1 day on automating routine job, my colleague came up with Annotation processor approach. He has created <code class="language-plaintext highlighter-rouge">NoCoverage</code> annotation and a processor which saves all annotated classes into a file. Later on the file was used by <code class="language-plaintext highlighter-rouge">jacocoTestReport</code> instead of <code class="language-plaintext highlighter-rouge">fileFilter</code> array. Genius!</p>
-    <p>Pros:</p>
-    <ul>
-      <li>Automation!</li>
-      <li>Less manual work</li>
-    </ul>
-    <p>Cons:</p>
-    <ul>
-      <li>APT is not suitable for this kind of jobs. Especially, if it doesn’t support incremental processing and you have many modules.</li>
-    </ul>
-    <h4 id="3-forked-kotlin-compiler">3. Forked Kotlin compiler</h4>
-    <p>We found out that JaCoCo team in order to support Lombok added a filter which doesn’t count coverage of <code class="language-plaintext highlighter-rouge">@Generated</code> annotated classes/methods. Without thinking twice, another colleague has forked Kotlin compiler (!) and modified so it started adding <code class="language-plaintext highlighter-rouge">Generated</code> annotation to every generated method. Of course, we haven’t used this approach in prod code. Later, JaCoCo added <code class="language-plaintext highlighter-rouge">@kotlin.Metadata</code> filter too.</p>
-    <p>… and finally!</p>
+    <p>This works for known, predictable class names — <code class="language-plaintext highlighter-rouge">R.class</code>, generated Dagger classes, known suffixes. The exclusion list lives in one place and is easy to audit.</p>
+    <p>The problem is that glob patterns applied to class names are brittle. In one memorable incident, a rule intended to exclude <code class="language-plaintext highlighter-rouge">R.class</code> and its nested classes (<code class="language-plaintext highlighter-rouge">**/R$*.class</code>) was written as <code class="language-plaintext highlighter-rouge">**/R*.class</code> — a subtle difference that caused JaCoCo to silently exclude every class whose name began with “R”. This went unnoticed for weeks, producing a coverage report that was technically generated but factually wrong.</p>
+    <p>Glob-based exclusion also creates an organizational problem: the list of excluded classes is in the build configuration, disconnected from the source files. There is no mechanism to detect when an exclusion entry becomes stale because the class it targeted was renamed or deleted. The list tends to accumulate cruft over time.</p>
+    <h3 id="2-annotation-processor">2. Annotation processor</h3>
+    <p>A colleague proposed a more elegant solution: create a <code class="language-plaintext highlighter-rouge">@NoCoverage</code> annotation and an annotation processor that reads it at compile time, collects all annotated class names, and writes them to a file. The Gradle task would then read that file as its exclusion list instead of a hardcoded array.</p>
+    <p>This was genuinely clever. The exclusion list becomes self-maintaining — developers annotate the classes they want excluded, and the configuration stays in sync with the source automatically.</p>
+    <p>The practical limitation is a phase mismatch. Annotation processors run during Kotlin/Java compilation. The <code class="language-plaintext highlighter-rouge">JacocoReport</code> Gradle task runs after compilation, during test execution and report generation. Coordinating the output of the annotation processor as an input to the Gradle task requires explicit task dependency wiring that is fragile across Gradle versions, build types, and module boundaries. In a multi-module project, the complexity becomes significant.</p>
+    <p>APT was designed to generate code, not to produce configuration consumed by external Gradle tasks. Using it for this purpose works, but it fights against the tool’s intended grain.</p>
+    <h3 id="3-forked-kotlin-compiler">3. Forked Kotlin compiler</h3>
+    <p>We learned that the JaCoCo team had added a special filter for Lombok — a Java code generation library — that suppressed coverage counting for methods annotated with <code class="language-plaintext highlighter-rouge">@Generated</code>. This made perfect sense: Lombok-generated code, like Kotlin-generated code, should not require test coverage.</p>
+    <p>A colleague proposed the obvious extension: if JaCoCo respects <code class="language-plaintext highlighter-rouge">@Generated</code> on methods, and if the Kotlin compiler generated that annotation on its auto-generated methods (data class helpers, etc.), the problem would be solved at the source.</p>
+    <p>The Kotlin compiler does not do this. So the colleague forked the Kotlin compiler and modified it to add <code class="language-plaintext highlighter-rouge">@Generated</code> annotations to every compiler-generated method.</p>
+    <p>This is remarkable. Forking a programming language’s compiler to solve a tooling problem is a drastic step, and it demonstrates both the severity of the issue and the depth of knowledge required to address it at that level. The forked compiler was never used in production — the maintenance burden would be untenable — but the experiment proved the concept worked.</p>
+    <p>Subsequently, JaCoCo added its own filter for <code class="language-plaintext highlighter-rouge">@kotlin.Metadata</code>, which covers some Kotlin-generated constructs. But this did not fully solve the problem for all generated code in Kotlin projects.</p>
     <h2 id="solution-annotation--kotlin-typealias">Solution: Annotation + Kotlin typealias</h2>
-    <p>While investigating JaCoCo code I found that they changed <code class="language-plaintext highlighter-rouge">AnnotationGeneratedFilter</code> behaviour. Now instead of checking exact match of annotation name it just should <a href="https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51">contain</a> <code class="language-plaintext highlighter-rouge">Generated</code> word. It means we can create any annotation with proper name and JaCoCo will automatically ignore all annotated classes and methods.</p>
-    <p>In case of Kotlin you can use <code class="language-plaintext highlighter-rouge">typealias</code> to make your code more readable:</p>
+    <p>While reading JaCoCo’s source code to understand what filters were available, I discovered something significant. The <code class="language-plaintext highlighter-rouge">AnnotationGeneratedFilter</code> — the filter originally added for Lombok support — had been changed from an exact name match to a <strong>substring match</strong>. Specifically, the annotation’s simple class name only needs to <a href="https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51">contain the word “Generated”</a>.</p>
+    <p>This means that any annotation whose class name contains “Generated” will cause JaCoCo to exclude the annotated element from coverage analysis. We do not need to use <code class="language-plaintext highlighter-rouge">javax.annotation.Generated</code>. We can create our own annotation with an appropriate name:</p>
     <div class="language-kotlin highlighter-rouge">
       <div class="highlight">
         <pre class="highlight"><code><span class="nd">@Retention</span><span class="p">(</span><span class="nc">AnnotationRetention</span><span class="p">.</span><span class="nc">BINARY</span><span class="p">)</span>
@@ -148,37 +191,57 @@
 </code></pre>
       </div>
     </div>
-    <p>Pros:</p>
+    <p>The <code class="language-plaintext highlighter-rouge">typealias</code> is a small but meaningful touch. At the bytecode level, <code class="language-plaintext highlighter-rouge">NoCoverage</code> is transparent — the JVM sees <code class="language-plaintext highlighter-rouge">NoCoverageGenerated</code>, which contains “Generated” and triggers the JaCoCo filter. At the source level, <code class="language-plaintext highlighter-rouge">@NoCoverage</code> is readable and clearly expresses the developer’s intent: this class is intentionally excluded from coverage.</p>
+    <p>Applying it is simple:</p>
+    <div class="language-kotlin highlighter-rouge">
+      <div class="highlight">
+        <pre class="highlight"><code><span class="nd">@NoCoverage</span>
+<span class="kd">data class</span> <span class="nc">GeneratedEntity</span><span class="p">(</span><span class="kd">val</span> <span class="py">id</span><span class="p">:</span> <span class="nc">Int</span><span class="p">,</span> <span class="kd">val</span> <span class="py">name</span><span class="p">:</span> <span class="nc">String</span><span class="p">)</span>
+</code></pre>
+      </div>
+    </div>
+    <p>JaCoCo will skip this class entirely in its coverage calculations.</p>
+    <p><strong>Pros:</strong></p>
     <ul>
-      <li>Easy to use</li>
+      <li>No build configuration changes</li>
       <li>No code generation</li>
+      <li>Exclusion stays co-located with the source it applies to</li>
+      <li>Works correctly across modules and build variants</li>
     </ul>
-    <p>Cons:</p>
+    <p><strong>Cons:</strong></p>
     <ul>
-      <li>Workaround. From JaCoCo Wiki:
+      <li>This is a workaround. The JaCoCo wiki explicitly states:
         <blockquote>
           <p>Remark: A Generated annotation should only be used for code actually generated by compilers or tools, never for manual exclusion.</p>
         </blockquote>
       </li>
-      <li>Useless annotation in prod code. But if you use code obfuscator such as Proguard/Dexguard/R8 (Android) that annotation will be cut out.</li>
+      <li>The annotation is present in the compiled artifact. In Android projects using ProGuard, R8, or DexGuard for release builds, annotations with <code class="language-plaintext highlighter-rouge">BINARY</code> retention are stripped during optimization, so there is no production impact. For projects that do not use code shrinking, the annotation remains in the release artifact but has no runtime effect.</li>
     </ul>
-    ]]></content><author><name>Anatolii Afanasev</name></author><category term="kotlin" /><category term="jacoco" /><summary type="html"><![CDATA[]]></summary></entry><entry><title type="html">Exclude properties from toString() of Kotlin data class (Sekret appx.)</title><link href="https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html" rel="alternate" type="text/html" title="Exclude properties from toString() of Kotlin data class (Sekret appx.)" /><published>2019-08-13T08:00:00+00:00</published><updated>2019-08-13T08:00:00+00:00</updated><id>https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide</id><content type="html" xml:base="https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"><![CDATA[<p><em>This post describes how to remove class properties from <code class="language-plaintext highlighter-rouge">toString()</code> method manually if you don’t want to use <a href="/kotlin-library/2019/08/13/sekret.html">Sekret</a> library.</em></p>
-  <h3 id="1-override-tostring-by-yourself">1. Override toString() by yourself</h3>
-  <p>The simplest way how you can hide sensitive information is overriding <code class="language-plaintext highlighter-rouge">toString</code>. 
-    But it always needs an additional work in every class. What if you want to show other properties? You will have to concatenate strings by yourself.</p>
+    <p>In practice, the constraint from the JaCoCo wiki reflects an ideal, not a reality. Large Kotlin projects contain genuinely untestable code — legacy code under business constraints, transitional code mid-refactor, structural code that is correct by construction. Teams need a practical mechanism to handle these cases. The annotation approach provides that mechanism with minimal overhead and maximal clarity at the point of use.</p>
+    <p><em>This article was originally posted on <a href="https://medium.com/@jokuskay/filter-out-classes-from-jacoco-report-using-annotations-a0a44e0d3cc9">Medium</a>.</em></p>
+    ]]></content><author><name>Anatolii Afanasev</name></author><category term="kotlin" /><category term="jacoco" /><summary type="html"><![CDATA[]]></summary></entry><entry><title type="html">Exclude properties from toString() of Kotlin data class (Sekret appx.)</title><link href="https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html" rel="alternate" type="text/html" title="Exclude properties from toString() of Kotlin data class (Sekret appx.)" /><published>2019-08-13T08:00:00+00:00</published><updated>2019-08-13T08:00:00+00:00</updated><id>https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide</id><content type="html" xml:base="https://afanasev.net/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html"><![CDATA[<p><em>This post describes how to remove class properties from the <code class="language-plaintext highlighter-rouge">toString()</code> method manually if you prefer not to use the <a href="/kotlin-library/2019/08/13/sekret.html">Sekret</a> compiler plugin.</em></p>
+  <hr />
+  <p>Kotlin’s data class <code class="language-plaintext highlighter-rouge">toString</code> is generated automatically to include every property defined in the primary constructor. This is convenient for debugging but problematic when some of those properties contain sensitive data — passwords, tokens, PII — that must not appear in logs, crash reports, or analytics pipelines.</p>
+  <p>There is no built-in Kotlin mechanism to exclude a specific field from the generated <code class="language-plaintext highlighter-rouge">toString</code> while keeping it in <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, and <code class="language-plaintext highlighter-rouge">copy</code>. The language does not (yet) offer an annotation equivalent to <code class="language-plaintext highlighter-rouge">@Transient</code> for serialization. The approaches below represent the practical trade-offs available in pure Kotlin, each with distinct implications for class semantics, mutability, and maintainability.</p>
+  <h3 id="1-override-tostring-yourself">1. Override toString() yourself</h3>
+  <p>The most straightforward approach is to manually override <code class="language-plaintext highlighter-rouge">toString</code> in the data class body:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">Data</span><span class="p">(</span>
     <span class="kd">val</span> <span class="py">login</span><span class="p">:</span> <span class="nc">String</span><span class="p">,</span>
-    <span class="kd">val</span> <span class="py">password</span><span class="p">:</span> <span class="nc">String</span> 
+    <span class="kd">val</span> <span class="py">password</span><span class="p">:</span> <span class="nc">String</span>
 <span class="p">)</span> <span class="p">{</span>
     <span class="k">override</span> <span class="k">fun</span> <span class="nf">toString</span><span class="p">()</span> <span class="p">=</span> <span class="s">""</span>
 <span class="p">}</span>
 </code></pre>
     </div>
   </div>
-  <h3 id="2-define-variable-out-of-data-class">2. Define variable out of Data class</h3>
-  <p>In this case the property won’t be included to any of autogenerated functions of data classes (toString, hashCode, equals, components, etc)</p>
+  <p><strong>What this solves:</strong> Prevents <code class="language-plaintext highlighter-rouge">password</code> from appearing in log output immediately and without adding any new types or indirection.</p>
+  <p><strong>What this breaks:</strong> You have opted out of the entire auto-generated <code class="language-plaintext highlighter-rouge">toString</code>. If you want other properties to appear — <code class="language-plaintext highlighter-rouge">login</code>, for example — you must now construct the string manually. Every time you add a new property to the class, you must remember to update the override. If you forget, the new property will silently never appear in logs, which is often exactly the wrong behavior. The maintenance burden grows proportionally with the class size.</p>
+  <p>It is also worth noting that overriding <code class="language-plaintext highlighter-rouge">toString</code> only affects logging output. The <code class="language-plaintext highlighter-rouge">password</code> field is still fully included in <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and destructuring (<code class="language-plaintext highlighter-rouge">componentN</code>). Those semantics remain intact — which is usually what you want, but is worth understanding clearly.</p>
+  <p><strong>When to use this:</strong> Acceptable for small, stable classes that are unlikely to grow, where the only goal is to suppress all output in logs entirely. For anything more nuanced, the maintenance cost is not worth it.</p>
+  <h3 id="2-define-the-property-outside-the-primary-constructor">2. Define the property outside the primary constructor</h3>
+  <p>Kotlin data class semantics only apply to properties declared in the primary constructor. Properties declared in the class body are excluded from <code class="language-plaintext highlighter-rouge">toString</code>, <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and all <code class="language-plaintext highlighter-rouge">componentN</code> functions:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">Data</span><span class="p">(</span>
@@ -193,8 +256,12 @@
 </code></pre>
     </div>
   </div>
+  <p><strong>What this solves:</strong> <code class="language-plaintext highlighter-rouge">password</code> is completely invisible to all auto-generated data class functions. It will never appear in <code class="language-plaintext highlighter-rouge">toString</code>, and it does not participate in equality comparisons or <code class="language-plaintext highlighter-rouge">copy()</code>.</p>
+  <p><strong>What this breaks:</strong> The exclusion from <code class="language-plaintext highlighter-rouge">equals</code> and <code class="language-plaintext highlighter-rouge">hashCode</code> changes the object’s identity semantics in a fundamental way. Two <code class="language-plaintext highlighter-rouge">Data</code> instances with the same <code class="language-plaintext highlighter-rouge">login</code> but different passwords are considered equal by the data class. <code class="language-plaintext highlighter-rouge">copy()</code> will produce a new instance without <code class="language-plaintext highlighter-rouge">password</code> copied — setting it to an uninitialized state. If <code class="language-plaintext highlighter-rouge">Data</code> objects are used as keys in maps or stored in sets, or if <code class="language-plaintext highlighter-rouge">copy()</code> is used to produce modified versions, these behaviors may produce subtle bugs.</p>
+  <p>There is also a forced mutability problem: defining a field in the class body requires it to be <code class="language-plaintext highlighter-rouge">var</code> (unless it has a default value). This breaks the immutability of the data class, which is often a core reason for choosing data classes in the first place. Initialization requires a two-step process — construct then set — which makes the class impossible to use in most functional pipelines.</p>
+  <p><strong>When to use this:</strong> When the property genuinely has no place in equality comparisons or copying — for example, a lazily-computed cache value or a transient UI handle. It is a poor fit for actual data fields like passwords.</p>
   <h3 id="3-use-a-wrapper-class">3. Use a wrapper class</h3>
-  <p>This one is more elegant solution but when you create/read a data you will have 1 more level of abstraction.</p>
+  <p>A more principled approach is to wrap the sensitive value in a type whose <code class="language-plaintext highlighter-rouge">toString</code> returns an empty string or a redaction marker:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="c1">// Wrapper</span>
@@ -213,8 +280,13 @@
 </code></pre>
     </div>
   </div>
-  <h3 id="4-do-not-use-data-classes-_ツ_">4. Do not use Data classes ¯\_(ツ)_/¯</h3>
-  <p>In this case you will not have all advantages of data classes.</p>
+  <p><strong>What this solves:</strong> <code class="language-plaintext highlighter-rouge">password</code> participates fully in all data class semantics — it is included in <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and destructuring. The only thing suppressed is the value in <code class="language-plaintext highlighter-rouge">toString</code>. The original data class structure is preserved, and you get correct <code class="language-plaintext highlighter-rouge">copy()</code> behavior.</p>
+  <p>There is an additional, underappreciated benefit: the type system now makes the sensitivity of this field explicit. When a developer reads the class definition, <code class="language-plaintext highlighter-rouge">Secret&lt;String&gt;</code> signals immediately that this field requires careful handling. It serves as inline documentation that persists through refactors. Code review tools and static analysis can potentially flag any access to <code class="language-plaintext highlighter-rouge">.data</code> on a <code class="language-plaintext highlighter-rouge">Secret</code> instance to ensure it is not being logged unsafely.</p>
+  <p><strong>What this breaks:</strong> Accessing the underlying value requires an extra <code class="language-plaintext highlighter-rouge">.data</code> dereference. This creates a small but consistent friction at every use site. Some developers view this as a drawback; others view it as a feature — friction that makes accidental logging slightly harder. The type is also not directly comparable to a plain <code class="language-plaintext highlighter-rouge">String</code>, which may complicate integration with serialization libraries or frameworks that expect a specific type.</p>
+  <p>A production-quality <code class="language-plaintext highlighter-rouge">Secret&lt;T&gt;</code> implementation should also override <code class="language-plaintext highlighter-rouge">equals</code> and <code class="language-plaintext highlighter-rouge">hashCode</code> to delegate to the wrapped value, ensuring that <code class="language-plaintext highlighter-rouge">Data("login", Secret("a")) != Data("login", Secret("b"))</code> works as expected.</p>
+  <p><strong>When to use this:</strong> The strongest of the manual options. The type-level signal, correct data class semantics, and composability make this a good pattern for codebases that need systematic protection without a compiler plugin.</p>
+  <h3 id="4-do-not-use-data-classes">4. Do not use data classes</h3>
+  <p>Sometimes the right answer is to step back and ask whether a data class was the appropriate choice at all:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="kd">class</span> <span class="nc">Data</span><span class="p">(</span>
@@ -224,9 +296,18 @@
 </code></pre>
     </div>
   </div>
-  ]]></content><author><name>Anatolii Afanasev</name></author><category term="kotlin" /><category term="data-class" /><summary type="html"><![CDATA[This post describes how to remove class properties from toString() method manually if you don’t want to use Sekret library.]]></summary></entry><entry><title type="html">Sekret — risk-free toString() of Kotlin data class?</title><link href="https://afanasev.net/kotlin-library/2019/08/13/sekret.html" rel="alternate" type="text/html" title="Sekret — risk-free toString() of Kotlin data class?" /><published>2019-08-13T07:18:12+00:00</published><updated>2019-08-13T07:18:12+00:00</updated><id>https://afanasev.net/kotlin-library/2019/08/13/sekret</id><content type="html" xml:base="https://afanasev.net/kotlin-library/2019/08/13/sekret.html"><![CDATA[<h2 id="problem">Problem</h2>
-  <p>Kotlin compiler automatically generates equals, hashCode, componentN, copy and <strong>toString</strong> functions for Data classes. It’s super useful because you as a developer don’t have to spend time on writing boilerplate code and testing. But there is one problem (at least for me) — a result of toString() will contain all properties of Data class.</p>
-  <p>Let me explain why it can be a problem. For example in Android development, if you use MVI pattern, Views tend to have a single render() that accepts a state to render on the screen:</p>
+  <p>A regular class gives you complete control over <code class="language-plaintext highlighter-rouge">toString</code>, <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, and <code class="language-plaintext highlighter-rouge">copy</code> (or the absence of <code class="language-plaintext highlighter-rouge">copy</code>). There is no auto-generated behavior to work around.</p>
+  <p><strong>When to use this:</strong> When the class does not actually need the semantics of a data class — no structural equality comparisons, no destructuring, no <code class="language-plaintext highlighter-rouge">copy()</code> calls. If the class is used only as a container passed through a pipeline and never compared or copied, the data class overhead (and the <code class="language-plaintext highlighter-rouge">toString</code> problem) may be unnecessary. Choosing a regular class in this case is not a workaround — it is the appropriate design decision.</p>
+  <hr />
+  <h2 id="the-underlying-problem-with-all-four-approaches">The Underlying Problem with All Four Approaches</h2>
+  <p>Each of the options above requires the developer to actively remember to protect every sensitive field, in every class, at every point in the class’s lifetime. They are all opt-in: the default behavior is to expose everything.</p>
+  <p>This creates a systematic risk. As classes evolve — new fields added, existing fields renamed — the protection must be consciously re-applied. A developer unfamiliar with the codebase’s conventions, or working under time pressure, will produce a class that leaks by default.</p>
+  <p>The <a href="/kotlin-library/2019/08/13/sekret.html">Sekret</a> compiler plugin addresses this at the root: protection is declared once per field with an annotation, and the compiler enforces it permanently. The annotation travels with the field through refactors, class renames, and codebase migrations. No manual <code class="language-plaintext highlighter-rouge">toString</code> override to maintain, no wrapper type to thread through the codebase — just a single annotation that expresses intent and delegates enforcement to the compiler.</p>
+  ]]></content><author><name>Anatolii Afanasev</name></author><category term="kotlin" /><category term="data-class" /><summary type="html"><![CDATA[This post describes how to remove class properties from the toString() method manually if you prefer not to use the Sekret compiler plugin.]]></summary></entry><entry><title type="html">Sekret — risk-free toString() of Kotlin data class?</title><link href="https://afanasev.net/kotlin-library/2019/08/13/sekret.html" rel="alternate" type="text/html" title="Sekret — risk-free toString() of Kotlin data class?" /><published>2019-08-13T07:18:12+00:00</published><updated>2019-08-13T07:18:12+00:00</updated><id>https://afanasev.net/kotlin-library/2019/08/13/sekret</id><content type="html" xml:base="https://afanasev.net/kotlin-library/2019/08/13/sekret.html"><![CDATA[<h2 id="problem">Problem</h2>
+  <p>One of Kotlin’s most appreciated features is the data class. With a single keyword, the compiler automatically generates <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, <code class="language-plaintext highlighter-rouge">componentN</code>, and <code class="language-plaintext highlighter-rouge">toString</code> — eliminating an entire category of boilerplate that Java developers had to write and maintain by hand. For domain objects, value types, and state containers, data classes are the obvious choice.</p>
+  <p>The <code class="language-plaintext highlighter-rouge">toString</code> function, in particular, is invaluable for debugging. When you log a data class instance, you get a complete, readable snapshot of its state: every field name and value, formatted cleanly. This is exactly what you want during development.</p>
+  <p>In production, it becomes a liability.</p>
+  <p>Consider a typical MVI (Model-View-Intent) architecture, where a view receives a single state object containing everything it needs to render:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">ViewState</span><span class="p">(</span>
@@ -239,7 +320,7 @@
 </code></pre>
     </div>
   </div>
-  <p>Great, now you may want to add some logging system to able to understand what your customer’s behavior or what they have seen before a crash or for just debugging purpose:</p>
+  <p>Adding observability to this pattern is natural and encouraged:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="k">fun</span> <span class="nf">render</span><span class="p">(</span><span class="n">viewState</span><span class="p">:</span> <span class="nc">ViewState</span><span class="p">)</span> <span class="p">{</span>
@@ -249,10 +330,36 @@
 </code></pre>
     </div>
   </div>
-  <p>Logger class can use Log.d() internally and just prints on *logcat. *Or it can be your own analytics system which sends data to web or just saves in files. It can even be Google Analytics, Crashlytics.log or any other 3rd party vendor. Your application can be a reason for PII, passwords, credit card info or any other sensitive data leakage. I agree that the logging system should be much smarter than just saving everything and everywhere.</p>
-  <p>It’s not only about Android, but it can also be an issue everywhere especially on microservices architecture where every component is independent and logs all in / out data. It can happen in Repository with sealed class results + data classes, Actions from View to Presenter, State of StateMachine, etc…</p>
-  <h2 id="solution">Solution</h2>
-  <p>There are <a href="/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html">many ways</a> how we can exclude our properties from toString() result. But all of them needs manual work. Since developers are lazy I’ve implemented a tool which helps with this. <strong>Sekret</strong> is Kotlin compiler plugin which changes generated Java bytecode of toString() method during the compilation process. You just need to annotate your property with a special annotation and that’s it!</p>
+  <p>When <code class="language-plaintext highlighter-rouge">logger.info</code> calls <code class="language-plaintext highlighter-rouge">viewState.toString()</code>, it produces something like:</p>
+  <div class="language-plaintext highlighter-rouge">
+    <div class="highlight">
+      <pre class="highlight"><code>ViewState(username=james.bond, password=123456, isButtonEnabled=true)
+</code></pre>
+    </div>
+  </div>
+  <p>That string now flows wherever your logger sends data — <code class="language-plaintext highlighter-rouge">logcat</code>, crash reporters, analytics SDKs, remote log aggregation services, third-party monitoring platforms. Every system that receives your logs now receives your users’ passwords.</p>
+  <p>This is not a hypothetical risk. It is a concrete, reproducible data pipeline from your application to third-party servers, with your users’ sensitive data flowing through it on every state change.</p>
+  <h2 id="the-scope-of-the-problem">The Scope of the Problem</h2>
+  <p>The data leakage vector extends well beyond Android’s MVI pattern. Any architecture that uses data classes as data containers and logs those containers is affected:</p>
+  <ul>
+    <li><strong>Crash reporters</strong> (Crashlytics, Sentry, Bugsnag) allow you to attach context objects to crash reports. If that context is a data class, its full contents — including sensitive fields — appear in the crash report.</li>
+    <li><strong>Analytics pipelines</strong> frequently serialize events and their associated state for processing. Data classes are natural event payloads.</li>
+    <li><strong>Microservice architectures</strong> often log all incoming and outgoing messages for observability. If your message types are data classes, every request and response is fully exposed in your log infrastructure.</li>
+    <li><strong>Repository pattern</strong> with sealed class results: <code class="language-plaintext highlighter-rouge">Result.Success(data = userProfile)</code> — logging the result logs the entire user profile.</li>
+    <li><strong>State machines</strong> logging every state transition: each logged state includes every field.</li>
+  </ul>
+  <p>The common thread: modern logging practices encourage comprehensive observability. Data classes make it trivial to log anything. The intersection of the two creates a systematic PII (Personally Identifiable Information) exfiltration risk.</p>
+  <h2 id="regulatory-consequences">Regulatory Consequences</h2>
+  <p>This is not just a best-practice concern. Under GDPR (General Data Protection Regulation) in the European Union, logging personal data — names, email addresses, passwords, health information, financial data — without a legitimate legal basis and appropriate technical controls can result in fines of up to €20 million or 4% of global annual revenue, whichever is higher. CCPA (California Consumer Privacy Act) carries similar obligations in the US. PCI DSS requirements explicitly prohibit logging cardholder data.</p>
+  <p>The challenge is that these leaks are silent. There is no exception, no warning, no test failure. The data simply flows into log storage, where it may sit unnoticed for months or years.</p>
+  <h2 id="existing-workarounds-and-their-limitations">Existing Workarounds and Their Limitations</h2>
+  <p>There are <a href="/kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html">several manual approaches</a> to excluding sensitive fields from <code class="language-plaintext highlighter-rouge">toString</code>. Each requires the developer to actively remember to protect every sensitive field, in every class, every time a class is modified.</p>
+  <p>Overriding <code class="language-plaintext highlighter-rouge">toString</code> entirely is the simplest approach but introduces a maintenance burden: every new property addition requires manually updating the override. Miss one update after a refactor and you have reintroduced the leak.</p>
+  <p>Wrapper types (<code class="language-plaintext highlighter-rouge">Secret&lt;T&gt;</code>) are more principled but require changing the field type, which affects the API surface, copy() calls, and any serialization configuration.</p>
+  <p>Defining fields outside the primary constructor removes them from all data class semantics, but forces mutability and changes equality semantics — two <code class="language-plaintext highlighter-rouge">Data</code> instances with different passwords compare as equal.</p>
+  <p>All of these approaches share a fundamental weakness: they are opt-in. The default behavior leaks. A developer who does not know about the risk, or forgets to apply the protection to a new field, produces a vulnerable class with no warning from the compiler.</p>
+  <h2 id="solution-a-compiler-plugin">Solution: A Compiler Plugin</h2>
+  <p><strong>Sekret</strong> is a Kotlin compiler plugin that modifies the generated <code class="language-plaintext highlighter-rouge">toString</code> bytecode for annotated fields during compilation. Instead of writing manual overrides or restructuring your data classes, you annotate individual sensitive fields with <code class="language-plaintext highlighter-rouge">@Secret</code>:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">Data</span><span class="p">(</span>
@@ -267,10 +374,25 @@
 </code></pre>
     </div>
   </div>
-  <p>More info on Github: <a href="https://github.com/aafanasev/sekret">https://github.com/aafanasev/sekret</a></p>
-  <p>Perhaps JetBrains will allow changing toString() body with an out-of-box solution like Transient annotation for serialization.</p>
+  <p>The password field is replaced with a redaction marker (<code class="language-plaintext highlighter-rouge">■■■</code>) in the output. Every other field continues to appear normally. The data class retains all its semantic properties — <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and <code class="language-plaintext highlighter-rouge">componentN</code> all include the password field as expected. Only <code class="language-plaintext highlighter-rouge">toString</code> is modified, and only for annotated fields.</p>
+  <h2 id="how-the-compiler-plugin-works">How the Compiler Plugin Works</h2>
+  <p>Building a Kotlin compiler plugin requires working at a level most Kotlin developers never encounter. The Kotlin compilation pipeline processes source code through several stages: parsing into a PSI (Program Structure Interface) tree, type-checking and resolution, translation to an IR (Intermediate Representation) tree, and finally code generation to JVM bytecode.</p>
+  <p>Sekret hooks into the IR stage. When the compiler generates the IR for a data class <code class="language-plaintext highlighter-rouge">toString</code> method, the plugin inspects the fields included in the generated implementation, identifies those annotated with <code class="language-plaintext highlighter-rouge">@Secret</code>, and rewrites the IR nodes responsible for appending those field values — replacing the value reference with a constant redaction string.</p>
+  <p>The result is identical to what you would get if you had hand-written <code class="language-plaintext highlighter-rouge">toString</code> to exclude the field, but it is generated automatically, stays in sync with the class definition as it evolves, and requires zero manual intervention after the initial annotation.</p>
+  <p>Critically, this is a <strong>compile-time transformation with no runtime overhead</strong>. The generated bytecode is as efficient as a hand-written <code class="language-plaintext highlighter-rouge">toString</code>. There is no reflection, no proxy, no wrapper object allocated per invocation.</p>
+  <h2 id="design-philosophy">Design Philosophy</h2>
+  <p>The <code class="language-plaintext highlighter-rouge">@Secret</code> annotation approach is deliberately declarative and self-documenting. When a code reviewer sees a field annotated with <code class="language-plaintext highlighter-rouge">@Secret</code>, the intent is immediately clear: this field contains sensitive data that must not appear in logs. The annotation serves double duty as both a functional directive and inline documentation.</p>
+  <p>This is the same philosophy behind <code class="language-plaintext highlighter-rouge">@Transient</code> for serialization — you annotate the field to opt out of a default behavior, rather than restructuring the class. Kotlin’s standard library already uses this pattern for serialization; Sekret brings it to <code class="language-plaintext highlighter-rouge">toString</code>.</p>
+  <p>The protection is also future-proof. Once a field is annotated, it remains protected regardless of how the surrounding class evolves. New fields added to the class appear in <code class="language-plaintext highlighter-rouge">toString</code> as normal. The annotated field never does.</p>
+  <p>More info on GitHub: <a href="https://github.com/aafanasev/sekret">https://github.com/aafanasev/sekret</a></p>
+  <p>Perhaps JetBrains will eventually offer an out-of-box solution similar to the <code class="language-plaintext highlighter-rouge">@Transient</code> annotation for serialization — a standard way to exclude fields from the compiler-generated <code class="language-plaintext highlighter-rouge">toString</code>. Until then, Sekret fills that gap.</p>
   <p><em>This article was originally posted on <a href="https://medium.com/@jokuskay/how-to-exclude-properties-from-tostring-of-kotlin-data-classes-f8dc04b8c45e">Medium</a>.</em></p>
-  ]]></content><author><name>Anatolii Afanasev</name></author><category term="kotlin-library" /><summary type="html"><![CDATA[Problem]]></summary></entry><entry><title type="html">KSON — auto-generate GSON adapters for Kotlin data classes</title><link href="https://afanasev.net/kotlin-library/2019/08/12/kson.html" rel="alternate" type="text/html" title="KSON — auto-generate GSON adapters for Kotlin data classes" /><published>2019-08-12T07:18:12+00:00</published><updated>2019-08-12T07:18:12+00:00</updated><id>https://afanasev.net/kotlin-library/2019/08/12/kson</id><content type="html" xml:base="https://afanasev.net/kotlin-library/2019/08/12/kson.html"><![CDATA[<p>Kotlin data classes are super suitable as API entities. And it’s very easy to use them with GSON. But always keep in mind GSON uses ReflectiveTypeAdapterFactory by default which is not only slower, also it’s dangerous. Reflection doesn’t care about nullability of your properties. For example, this code will throw NullPointerException when you try to use <strong>entity.id</strong> in your code though it should throw it earlier during parsing JSON:</p>
+  ]]></content><author><name>Anatolii Afanasev</name></author><category term="kotlin-library" /><summary type="html"><![CDATA[Problem]]></summary></entry><entry><title type="html">KSON — auto-generate GSON adapters for Kotlin data classes</title><link href="https://afanasev.net/kotlin-library/2019/08/12/kson.html" rel="alternate" type="text/html" title="KSON — auto-generate GSON adapters for Kotlin data classes" /><published>2019-08-12T07:18:12+00:00</published><updated>2019-08-12T07:18:12+00:00</updated><id>https://afanasev.net/kotlin-library/2019/08/12/kson</id><content type="html" xml:base="https://afanasev.net/kotlin-library/2019/08/12/kson.html"><![CDATA[<p>Kotlin data classes are an ideal fit for API response models. They are concise, immutable by default, and come with auto-generated <code class="language-plaintext highlighter-rouge">equals</code>, <code class="language-plaintext highlighter-rouge">hashCode</code>, <code class="language-plaintext highlighter-rouge">copy</code>, and <code class="language-plaintext highlighter-rouge">toString</code> — everything you need from a value object representing a network payload. Pairing them with GSON is natural and widely practiced across the Android ecosystem.</p>
+  <p>However, there is a subtle but serious trap hiding in that combination — one that silently violates Kotlin’s type safety guarantees and can cause crashes that are difficult to reproduce and frustrating to diagnose.</p>
+  <h2 id="the-problem-gson-breaks-kotlins-null-safety-contract">The Problem: GSON Breaks Kotlin’s Null Safety Contract</h2>
+  <p>Kotlin’s null safety is one of its most valuable features. When you declare a property as non-nullable (<code class="language-plaintext highlighter-rouge">val id: Int</code>), the compiler enforces at every call site that this value cannot be null. The type system becomes a correctness guarantee you can rely on throughout your codebase.</p>
+  <p>GSON’s default deserialization strategy, however, does not understand Kotlin’s nullability. It uses <code class="language-plaintext highlighter-rouge">ReflectiveTypeAdapterFactory</code>, which bypasses normal object construction entirely. Instead of calling your Kotlin constructor — which enforces null checks — GSON uses <code class="language-plaintext highlighter-rouge">sun.misc.Unsafe.allocateInstance()</code> to create objects directly from bytecode, then sets fields via reflection.</p>
+  <p>The practical consequence: GSON will happily deserialize <code class="language-plaintext highlighter-rouge">null</code> into a non-nullable Kotlin field, and your code will not know until something dereferences it:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="kd">data class</span> <span class="nc">Entity</span><span class="p">(</span><span class="kd">val</span> <span class="py">id</span><span class="p">:</span> <span class="nc">Int</span><span class="p">)</span>
@@ -280,8 +402,17 @@
 </code></pre>
     </div>
   </div>
-  <p>In order to solve this issue in Java, I used to use AutoValue with AutoGson extension but didn’t find any library for Kotlin (at that time). So I’ve decided to implement my own library and called it <strong>KSON</strong>.</p>
-  <p>Simply annotate your data class with Kson annotation and annotation processor will generate null-safe GSON type adapter for your entity class:</p>
+  <p>What makes this especially dangerous is <em>where</em> the exception surfaces. The failure does not happen at the parsing boundary — where it would be easy to catch, log, and handle — but somewhere deep in business logic, minutes or hours later, in code that has every reason to trust that <code class="language-plaintext highlighter-rouge">entity.id</code> is safe to use. This produces NullPointerExceptions in code that looks correct, coming from a source that the developer never suspects.</p>
+  <p>This is not a theoretical edge case. Malformed API responses, backend bugs, schema evolution, and network corruption all produce null fields from time to time. When they do, a reflection-based deserializer will pass the corruption silently downstream.</p>
+  <h2 id="why-there-was-no-easy-fix">Why There Was No Easy Fix</h2>
+  <p>The root cause lies in a fundamental incompatibility between the JVM type system and Kotlin’s nullability model.</p>
+  <p>Kotlin’s non-nullability is a compile-time construct. At the bytecode level — the level GSON operates at — a <code class="language-plaintext highlighter-rouge">val id: Int</code> is indistinguishable from a <code class="language-plaintext highlighter-rouge">var id: Int?</code>. Nullability annotations are present in the Kotlin metadata attached to the class, but GSON’s reflection-based adapter does not read them. It sees a plain Java <code class="language-plaintext highlighter-rouge">int</code> field and writes whatever value it finds in the JSON, including null (which becomes 0 for primitives, or an actual <code class="language-plaintext highlighter-rouge">null</code> reference for objects).</p>
+  <p>The correct fix requires generating a <strong>custom type adapter</strong> for each data class — one that calls the actual Kotlin constructor, which performs null checks at instantiation time. Writing these by hand is tedious and error-prone. Every time a class changes, the adapter must be updated. Forgetting to update it reintroduces the bug silently.</p>
+  <h2 id="the-java-precedent">The Java Precedent</h2>
+  <p>This problem has a well-established precedent in Java. The AutoValue library generates immutable value classes from abstract definitions, and the companion AutoGson extension generates matching GSON type adapters automatically. Java teams used this combination to get safe, efficient GSON deserialization without boilerplate.</p>
+  <p>When Kotlin was introduced and teams began migrating their model classes to data classes, the AutoValue+AutoGson combination no longer applied — data classes have their own, distinct mechanism. At the time I built KSON, there was no equivalent library for Kotlin. KSON was written to fill that gap.</p>
+  <h2 id="how-kson-works">How KSON Works</h2>
+  <p>KSON uses Kotlin’s annotation processing (kapt) to generate type adapters at compile time. Annotate a data class with <code class="language-plaintext highlighter-rouge">@Kson</code>:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="nd">@Kson</span>
@@ -289,7 +420,9 @@
 </code></pre>
     </div>
   </div>
-  <p>Also, you can use KsonFactory annotation and register auto-generated type adapter factory which contains all generated adapters:</p>
+  <p>During compilation, the annotation processor reads the class’s constructor parameters, their types, and their names, then generates a concrete <code class="language-plaintext highlighter-rouge">TypeAdapter&lt;Entity&gt;</code> that calls the Kotlin constructor directly. If a required field is null in the JSON, the adapter throws a <code class="language-plaintext highlighter-rouge">JsonParseException</code> at the parsing boundary — exactly where the error belongs.</p>
+  <p>There is no runtime reflection, no dynamic proxy, and no startup cost. The generated adapter is a plain Kotlin class that GSON uses like any other hand-written adapter. The correctness guarantee is identical to writing the adapter by hand, and it stays in sync with your model class automatically.</p>
+  <p>For larger projects with many model classes, <code class="language-plaintext highlighter-rouge">@KsonFactory</code> generates a <code class="language-plaintext highlighter-rouge">TypeAdapterFactory</code> that registers all generated adapters in one call:</p>
   <div class="language-kotlin highlighter-rouge">
     <div class="highlight">
       <pre class="highlight"><code><span class="nd">@KsonFactory</span>
@@ -303,7 +436,13 @@
 </code></pre>
     </div>
   </div>
-  <p>As you see, KSON doesn’t need any extra work, just need to add 1 annotation to your class and that’s it! If you don’t want to use for some reason you can simply delete 1 line of code.</p>
-  <p>More info on Github: <a href="https://github.com/aafanasev/kson">https://github.com/aafanasev/kson</a></p>
+  <p>This keeps the GSON configuration clean regardless of how many model classes the project has.</p>
+  <h2 id="ergonomics-and-adoption">Ergonomics and Adoption</h2>
+  <p>The design intentionally keeps the API surface minimal. Adding KSON to an existing class requires one annotation. Removing it requires deleting one line. There is no configuration file, no code generator to run manually, and no interface to implement. If you decide KSON is not right for your project, the removal is surgical.</p>
+  <p>This matters in the real world. Libraries that require significant adoption effort see slow uptake and are often abandoned midway through migration. A library that can be incrementally adopted — one class at a time, with instant rollback — is far more likely to be used consistently.</p>
+  <p>Beyond convenience, the performance argument is meaningful at scale. Reflection-based deserialization is measurably slower than custom type adapters. On mobile devices where CPU resources are limited and startup time is user-visible, the difference adds up across the hundreds of API calls a typical app makes per session.</p>
+  <h2 id="impact">Impact</h2>
+  <p>GSON remains one of the most widely used JSON libraries in Android development. The null safety vulnerability it creates when combined with Kotlin data classes affects any project that has not explicitly written or generated custom type adapters — which is the majority. KSON provides the missing piece: a zero-configuration, compile-time solution that restores the null safety guarantees Kotlin developers expect and makes reflection-based deserialization of Kotlin classes safe by default.</p>
+  <p>More info on GitHub: <a href="https://github.com/aafanasev/kson">https://github.com/aafanasev/kson</a></p>
   <p><em>This article was originally posted on <a href="https://medium.com/@jokuskay/kson-auto-generate-gson-adapters-for-kotlin-data-classes-17af43b6c267">Medium</a>.</em></p>
-  ]]></content><author><name>Anatolii Afanasev</name></author><category term="kotlin-library" /><summary type="html"><![CDATA[Kotlin data classes are super suitable as API entities. And it’s very easy to use them with GSON. But always keep in mind GSON uses ReflectiveTypeAdapterFactory by default which is not only slower, also it’s dangerous. Reflection doesn’t care about nullability of your properties. For example, this code will throw NullPointerException when you try to use entity.id in your code though it should throw it earlier during parsing JSON:]]></summary></entry></feed>
+  ]]></content><author><name>Anatolii Afanasev</name></author><category term="kotlin-library" /><summary type="html"><![CDATA[Kotlin data classes are an ideal fit for API response models. They are concise, immutable by default, and come with auto-generated equals, hashCode, copy, and toString — everything you need from a value object representing a network payload. Pairing them with GSON is natural and widely practiced across the Android ecosystem.]]></summary></entry></feed>
