@@ -6,26 +6,47 @@ categories: kotlin jacoco
 ---
 
 {:refdef: style="text-align: center;"}
-![JaCoCo code coverate report with Generated annotation](/assets/img/jacoco-code-coverage.png)
+![JaCoCo code coverage report with Generated annotation](/assets/img/jacoco-code-coverage.png)
 {: refdef}
 
 ## Story
 
-(can be skipped)
+Engineering culture at scale is difficult to build and even harder to maintain. In our company, we made a deliberate decision to enforce code coverage as a merge requirement — a hard gate on the CI pipeline that prevented branches from being merged unless they met a minimum threshold. We chose 80%: every new or modified class had to be covered by unit tests to at least that level.
 
-Long time ago in our company, we decided to use code coverage level as one of the must requirements to merge PR into `develop` branch. We have automated merge bot which automatically merges if the branch meets all requirements. We came up with magic number `80%`, so every new/modified class must be covered by Unit tests as minimum 80%.
+*There are many debates about what the right coverage threshold is, whether coverage is a useful metric at all, and how to avoid gaming it. This article is not about that.*
 
-*There are many discussions about code coverage, 80%, JaCoCo, etc. This article is not about that.*
+The policy had real effects. Teams began writing more testable code. Architecture improved — highly coupled, untestable code tends to resist coverage requirements in ways that become impossible to ignore. App stability measurably increased. The discipline around testing became part of how we worked, not an afterthought.
 
-We were happy with this requirement. Teams started to write more testable code, think about architecture, app stability went up, etc. We understood it's impossible to cover all classes in our project, there are many reasons: legacy code (lots of LOC need to be refactored; Business just won't give time for that; "if it works don't touch!"), auto-generated code (why we need to test 3rd party libs, etc), some code frankly does not need to be tested. Therefore, we need a way to filter out specific classes from JaCoCo report and allow devs/tools to merge branches.
+But we quickly discovered a class of code that was untestable not through neglect or poor design, but by its nature:
 
-Even more problems started to appear after moving to Kotlin from Java. JaCoCo, as you may know, works as java-agent with java bytecode only. Kotlin is a great language which reduced boilerplate code a lot but underhood the hood (in case of JVM) it generates a lot of helper methods, lines of code. For example, data class becomes a class with auto-generated methods such as `equals`, `hashCode`, `component1`, etc; even one line of code like `s?.foo()` or just `s.foo()` (where `s` defined as `lateinit`) will have 1 `if` in the generated code. Obviuosly, we do not have to test the generated code. All this generated stuff dramatically decreased our code coverage numbers. Keep in mind, those numbers can be KPI for some teams (yeah, bloody enterprise...).
+- **Legacy code** with deeply tangled dependencies, thousands of lines that would require months of refactoring before tests could be written — refactoring that the business would not prioritize because "it works"
+- **Auto-generated code** — output from annotation processors, AIDL interface bindings, generated Room DAOs, Dagger components — code that is correct by construction and pointless to re-test
+- **Delegating code** that exists only to forward calls and has no logic to verify
 
-## Ideas
+These classes needed to be excluded from coverage calculations so that teams could meet the threshold on the code they actually owned and controlled.
 
-#### 1. Custom Gradle task with filter
+Then we migrated from Java to Kotlin, and the problem became significantly more complex.
 
-This way is suitable for most teams. Create a task using `JacocoReport` and make it depend on `test` &amp; `generate report` tasks. Then define an array of classes that you want to ignore and pass it as `excludes` parameter of `fileTree` method.
+## The Kotlin Bytecode Problem
+
+JaCoCo operates at the bytecode level. It instruments compiled `.class` files by injecting probes that track which lines and branches have been executed. This works reliably for Java code, where the relationship between source lines and bytecode is relatively straightforward.
+
+Kotlin is different. The language is designed to eliminate boilerplate, and it achieves this by having the compiler generate significant amounts of bytecode from compact source constructs. A few examples:
+
+- A simple `data class` with three fields generates `equals`, `hashCode`, `toString`, `copy`, and three `componentN` functions — all as fully-realized bytecode methods that JaCoCo counts independently.
+- A safe call `s?.foo()` compiles to a null check (`if`/`else` branch in bytecode), even though there is no explicit conditional in the source.
+- A `lateinit var` field access generates a null check that appears as an uncovered branch if the test path never triggers the uninitialized case.
+- Companion objects, object declarations, and sealed class subclasses all generate additional bytecode scaffolding.
+
+The result: coverage numbers for Kotlin projects are systematically lower than the source code suggests. A data class that any developer would consider fully tested — constructors called, methods invoked — shows gaps because JaCoCo is counting generated bytecode that has no corresponding source line for tests to exercise. For a large Kotlin project, this distortion can move the effective coverage percentage by 5–15 points.
+
+When coverage is a KPI, or when it gates merges in an automated pipeline, that distortion has real consequences.
+
+## Approaches We Explored
+
+### 1. Custom Gradle task with filename filters
+
+The standard approach, and the first thing any team discovers when searching for this problem, is to define an exclusion list in the `JacocoReport` Gradle task:
 
 ```groovy
 task jacocoTestReport(type: JacocoReport, dependsOn: [...]) {
@@ -36,7 +57,7 @@ task jacocoTestReport(type: JacocoReport, dependsOn: [...]) {
     ]
 
     def debugTree = fileTree(
-        dir: "${buildDir}/intermediates/classes/debug", 
+        dir: "${buildDir}/intermediates/classes/debug",
         excludes: fileFilter // <-- exclude listed classes
     )
 
@@ -46,34 +67,39 @@ task jacocoTestReport(type: JacocoReport, dependsOn: [...]) {
 }
 ```
 
-Pros:
-- All ignored classes in 1 place
+This works for known, predictable class names — `R.class`, generated Dagger classes, known suffixes. The exclusion list lives in one place and is easy to audit.
 
-Cons:
-- Easy to make a mistake. One day we have found a rule `**/R*.class` which supposed to filter out `R` class & nested classes (known by every Android developer) but JaCoCo was ignoring all classes started with `R` :)
+The problem is that glob patterns applied to class names are brittle. In one memorable incident, a rule intended to exclude `R.class` and its nested classes (`**/R$*.class`) was written as `**/R*.class` — a subtle difference that caused JaCoCo to silently exclude every class whose name began with "R". This went unnoticed for weeks, producing a coverage report that was technically generated but factually wrong.
 
-#### 2. Annotation processor
+Glob-based exclusion also creates an organizational problem: the list of excluded classes is in the build configuration, disconnected from the source files. There is no mechanism to detect when an exclusion entry becomes stale because the class it targeted was renamed or deleted. The list tends to accumulate cruft over time.
 
-Since all developers are lazy and we rather spend 1 day on automating routine job, my colleague came up with Annotation processor approach. He has created `NoCoverage` annotation and a processor which saves all annotated classes into a file. Later on the file was used by `jacocoTestReport` instead of `fileFilter` array. Genius!
+### 2. Annotation processor
 
-Pros:
-- Automation!
-- Less manual work
+A colleague proposed a more elegant solution: create a `@NoCoverage` annotation and an annotation processor that reads it at compile time, collects all annotated class names, and writes them to a file. The Gradle task would then read that file as its exclusion list instead of a hardcoded array.
 
-Cons:
-- APT is not suitable for this kind of jobs. Especially, if it doesn't support incremental processing and you have many modules.
+This was genuinely clever. The exclusion list becomes self-maintaining — developers annotate the classes they want excluded, and the configuration stays in sync with the source automatically.
 
-#### 3. Forked Kotlin compiler
+The practical limitation is a phase mismatch. Annotation processors run during Kotlin/Java compilation. The `JacocoReport` Gradle task runs after compilation, during test execution and report generation. Coordinating the output of the annotation processor as an input to the Gradle task requires explicit task dependency wiring that is fragile across Gradle versions, build types, and module boundaries. In a multi-module project, the complexity becomes significant.
 
-We found out that JaCoCo team in order to support Lombok added a filter which doesn't count coverage of `@Generated` annotated classes/methods. Without thinking twice, another colleague has forked Kotlin compiler (!) and modified so it started adding `Generated` annotation to every generated method. Of course, we haven't used this approach in prod code. Later, JaCoCo added `@kotlin.Metadata` filter too.
+APT was designed to generate code, not to produce configuration consumed by external Gradle tasks. Using it for this purpose works, but it fights against the tool's intended grain.
 
-... and finally!
+### 3. Forked Kotlin compiler
+
+We learned that the JaCoCo team had added a special filter for Lombok — a Java code generation library — that suppressed coverage counting for methods annotated with `@Generated`. This made perfect sense: Lombok-generated code, like Kotlin-generated code, should not require test coverage.
+
+A colleague proposed the obvious extension: if JaCoCo respects `@Generated` on methods, and if the Kotlin compiler generated that annotation on its auto-generated methods (data class helpers, etc.), the problem would be solved at the source.
+
+The Kotlin compiler does not do this. So the colleague forked the Kotlin compiler and modified it to add `@Generated` annotations to every compiler-generated method.
+
+This is remarkable. Forking a programming language's compiler to solve a tooling problem is a drastic step, and it demonstrates both the severity of the issue and the depth of knowledge required to address it at that level. The forked compiler was never used in production — the maintenance burden would be untenable — but the experiment proved the concept worked.
+
+Subsequently, JaCoCo added its own filter for `@kotlin.Metadata`, which covers some Kotlin-generated constructs. But this did not fully solve the problem for all generated code in Kotlin projects.
 
 ## Solution: Annotation + Kotlin typealias
 
-While investigating JaCoCo code I found that they changed `AnnotationGeneratedFilter` behaviour. Now instead of checking exact match of annotation name it just should [contain](https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51) `Generated` word. It means we can create any annotation with proper name and JaCoCo will automatically ignore all annotated classes and methods. 
+While reading JaCoCo's source code to understand what filters were available, I discovered something significant. The `AnnotationGeneratedFilter` — the filter originally added for Lombok support — had been changed from an exact name match to a **substring match**. Specifically, the annotation's simple class name only needs to [contain the word "Generated"](https://github.com/jacoco/jacoco/blob/6bcce6972b8939d7925c4b4d3df785d9a7b00007/org.jacoco.core/src/org/jacoco/core/internal/analysis/filter/AnnotationGeneratedFilter.java#L51).
 
-In case of Kotlin you can use `typealias` to make your code more readable:
+This means that any annotation whose class name contains "Generated" will cause JaCoCo to exclude the annotated element from coverage analysis. We do not need to use `javax.annotation.Generated`. We can create our own annotation with an appropriate name:
 
 ```kotlin
 @Retention(AnnotationRetention.BINARY)
@@ -86,11 +112,28 @@ typealias NoCoverage = NoCoverageGenerated
 typealias NoCoverage = Generated // from javax.annotations package
 ```
 
-Pros:
-- Easy to use
-- No code generation
+The `typealias` is a small but meaningful touch. At the bytecode level, `NoCoverage` is transparent — the JVM sees `NoCoverageGenerated`, which contains "Generated" and triggers the JaCoCo filter. At the source level, `@NoCoverage` is readable and clearly expresses the developer's intent: this class is intentionally excluded from coverage.
 
-Cons:
-- Workaround. From JaCoCo Wiki: 
+Applying it is simple:
+
+```kotlin
+@NoCoverage
+data class GeneratedEntity(val id: Int, val name: String)
+```
+
+JaCoCo will skip this class entirely in its coverage calculations.
+
+**Pros:**
+- No build configuration changes
+- No code generation
+- Exclusion stays co-located with the source it applies to
+- Works correctly across modules and build variants
+
+**Cons:**
+- This is a workaround. The JaCoCo wiki explicitly states:
   > Remark: A Generated annotation should only be used for code actually generated by compilers or tools, never for manual exclusion.
-- Useless annotation in prod code. But if you use code obfuscator such as Proguard/Dexguard/R8 (Android) that annotation will be cut out.
+- The annotation is present in the compiled artifact. In Android projects using ProGuard, R8, or DexGuard for release builds, annotations with `BINARY` retention are stripped during optimization, so there is no production impact. For projects that do not use code shrinking, the annotation remains in the release artifact but has no runtime effect.
+
+In practice, the constraint from the JaCoCo wiki reflects an ideal, not a reality. Large Kotlin projects contain genuinely untestable code — legacy code under business constraints, transitional code mid-refactor, structural code that is correct by construction. Teams need a practical mechanism to handle these cases. The annotation approach provides that mechanism with minimal overhead and maximal clarity at the point of use.
+
+*This article was originally posted on [Medium](https://medium.com/@jokuskay/filter-out-classes-from-jacoco-report-using-annotations-a0a44e0d3cc9).*
