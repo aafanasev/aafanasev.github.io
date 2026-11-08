@@ -1,34 +1,35 @@
-name: Deploy Jekyll
+name: Deploy Hugo
 
 on:
   push:
     branches:
       - master
     paths:
-      - "_jekyll/**"
+      - "_hugo/**"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: ruby/setup-ruby@v1
+      - uses: actions/checkout@v4
         with:
-          ruby-version: 3.4.2
-      - name: Run jekyll build
+          submodules: true
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.169.0"
+          extended: true
+      - name: Run hugo build
         run: |
-          cd _jekyll
-          gem install bundler
-          bundle install
-          bundle exec jekyll build
+          cd _hugo
+          hugo --minify
         env:
-          JEKYLL_ENV: production
+          HUGO_ENVIRONMENT: production
       - name: Move build output to root dir
-        run: cp -rv ./_jekyll/_site/* ./
+        run: cp -rv ./_hugo/public/* ./
       - uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          title: Jekyll
-          labels: auto-deploy, jekyll
-          branch: jekyll
+          title: Hugo
+          labels: auto-deploy, hugo
+          branch: hugo
           branch-suffix: timestamp

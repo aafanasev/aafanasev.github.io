@@ -1,11 +1,11 @@
 ---
-layout: post
 title:  Exclude properties from toString() of Kotlin data class (Sekret appx.)
 date:   2019-08-13 15:00:00 +0700
-categories: kotlin data-class
+categories: [kotlin, data-class]
+url: /kotlin/data-class/2019/08/13/kotlin-data-class-tostirng-hide.html
 ---
 
-*This post describes how to remove class properties from the `toString()` method manually if you prefer not to use the [Sekret]({% post_url 2019-08-13-sekret %}) compiler plugin.*
+*This post describes how to remove class properties from the `toString()` method manually if you prefer not to use the [Sekret]({{< relref "2019-08-13-sekret" >}}) compiler plugin.*
 
 ---
 
@@ -111,4 +111,4 @@ Each of the options above requires the developer to actively remember to protect
 
 This creates a systematic risk. As classes evolve — new fields added, existing fields renamed — the protection must be consciously re-applied. A developer unfamiliar with the codebase's conventions, or working under time pressure, will produce a class that leaks by default.
 
-The [Sekret]({% post_url 2019-08-13-sekret %}) compiler plugin addresses this at the root: protection is declared once per field with an annotation, and the compiler enforces it permanently. The annotation travels with the field through refactors, class renames, and codebase migrations. No manual `toString` override to maintain, no wrapper type to thread through the codebase — just a single annotation that expresses intent and delegates enforcement to the compiler.
+The [Sekret]({{< relref "2019-08-13-sekret" >}}) compiler plugin addresses this at the root: protection is declared once per field with an annotation, and the compiler enforces it permanently. The annotation travels with the field through refactors, class renames, and codebase migrations. No manual `toString` override to maintain, no wrapper type to thread through the codebase — just a single annotation that expresses intent and delegates enforcement to the compiler.
