@@ -1,13 +1,11 @@
 ---
-layout: post
 title:  Filter out classes from JaCoCo report using annotaitons
 date:   2020-04-10 16:26:00 +0700
-categories: kotlin jacoco
+categories: [kotlin, jacoco]
+url: /kotlin/jacoco/2020/04/10/jacoco-ignore-annotation.html
 ---
 
-{:refdef: style="text-align: center;"}
 ![JaCoCo code coverage report with Generated annotation](/assets/img/jacoco-code-coverage.png)
-{: refdef}
 
 ## Story
 

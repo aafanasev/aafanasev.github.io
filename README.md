@@ -1,60 +1,65 @@
 # afanasev.net
 
-Personal tech blog at [afanasev.net](https://afanasev.net), built with [Jekyll](https://jekyllrb.com) and hosted on GitHub Pages.
+Personal tech blog at [afanasev.net](https://afanasev.net), built with [Hugo](https://gohugo.io) and the [PaperMod](https://github.com/adityatelange/hugo-PaperMod) theme, hosted on GitHub Pages.
 
 ## Repo layout
 
 This repo has an unconventional structure required by GitHub Pages:
 
 ```
-/                   ← generated site output (do not edit directly)
-├── _jekyll/        ← all source files live here
-│   ├── _posts/     ← blog posts
-│   ├── _drafts/    ← unpublished drafts
-│   ├── _config.yml ← site configuration
-│   └── ...
+/                       ← generated site output (do not edit directly)
+├── _hugo/              ← all source files live here
+│   ├── content/posts/  ← blog posts (drafts use `draft: true`)
+│   ├── content/*.md    ← standalone pages (About, Projects)
+│   ├── layouts/        ← overrides of theme templates
+│   ├── static/         ← files copied as-is (images, robots.txt)
+│   ├── themes/PaperMod ← theme (git submodule)
+│   └── hugo.toml       ← site configuration
 └── .github/
     └── workflows/
         └── deploy.yaml
 ```
 
-The root-level HTML, XML, and asset files are the compiled output of the Jekyll build — managed automatically by CI. **All content and configuration changes go in `_jekyll/`.**
+The root-level HTML, XML, and asset files are the compiled output of the Hugo build — managed automatically by CI. **All content and configuration changes go in `_hugo/`.**
 
 ## Local development
 
+Requires Hugo **extended** ≥ 0.158 (CI uses 0.169.0).
+
 ```bash
-cd _jekyll
-bundle install
-bundle exec jekyll serve
+git submodule update --init   # fetch the theme after cloning
+cd _hugo
+hugo server -D                # -D also renders drafts
 ```
 
-The site will be available at `http://localhost:4000`.
+The site will be available at `http://localhost:1313`.
 
 ## Writing a post
 
-Create a new file in `_jekyll/_posts/` following the naming convention `YYYY-MM-DD-slug.md`:
+Create a new file in `_hugo/content/posts/` named `YYYY-MM-DD-slug.md`:
 
 ```markdown
 ---
-layout: post
-title:  Your Post Title
-date:   2025-01-01 12:00:00 +0700
-categories: kotlin android
+title: Your Post Title
+date: 2026-01-01 12:00:00 +0700
+categories: [kotlin, android]
 ---
 
 Post content here.
 ```
 
-**Existing categories:** `kotlin`, `kotlin-library`, `android`, `data-class`
+New posts are published at `/YYYY/MM/DD/<slug>/`. Posts migrated from Jekyll keep their old URLs via a `url:` front matter field — don't change those.
 
-Drafts go in `_jekyll/_drafts/` and are excluded from the build until moved to `_posts/`.
+Link to other posts with `{{< relref "2019-08-13-sekret" >}}`. External links open in a new tab automatically.
+
+**Existing categories:** `kotlin`, `kotlin-library`, `android`, `data-class`, `jacoco`, `crashlytics`
 
 ## Deployment
 
-Pushing to `master` with any changes under `_jekyll/` triggers the GitHub Actions workflow:
+Pushing to `master` with any changes under `_hugo/` triggers the GitHub Actions workflow:
 
-1. Builds the site with `bundle exec jekyll build`
-2. Copies the output from `_jekyll/_site/` to the repo root
+1. Builds the site with `hugo --minify`
+2. Copies the output from `_hugo/public/` to the repo root
 3. Opens a pull request with the generated changes
 
 Merge the PR to publish.

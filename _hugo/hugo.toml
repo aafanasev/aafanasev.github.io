@@ -1,0 +1,61 @@
+baseURL = "https://afanasev.net/"
+locale = "en-US"
+title = "afanasev.net"
+theme = "PaperMod"
+
+[pagination]
+  pagerSize = 10
+
+# New posts: /YYYY/MM/DD/<slug>/ (slug defaults to the urlized title).
+# Posts migrated from Jekyll pin their old URL with `url:` in front matter.
+[permalinks]
+  posts = "/:year/:month/:day/:slug/"
+
+[taxonomies]
+  category = "categories"
+
+[outputFormats.RSS]
+  baseName = "feed"  # keep /feed.xml for existing subscribers
+
+[outputs]
+  home = ["HTML", "RSS"]
+
+[services.disqus]
+  shortname = "afanasev-net"
+
+[params]
+  env = "production"
+  description = "Boring coding"
+  author = "Anatolii Afanasev"
+  defaultTheme = "auto"
+  ShowReadingTime = true
+  ShowCodeCopyButtons = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = false
+  comments = true
+  mainSections = ["posts"]
+
+  [params.homeInfoParams]
+    Title = "afanasev.net"
+    Content = "Boring coding"
+
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/aafanasev"
+
+  [[params.socialIcons]]
+    name = "linkedin"
+    url = "https://www.linkedin.com/in/aafanasev"
+
+[menus]
+  [[menus.main]]
+    name = "Projects"
+    pageRef = "/projects"
+    weight = 10
+  [[menus.main]]
+    name = "About"
+    pageRef = "/about"
+    weight = 20
+
+[markup.highlight]
+  noClasses = false
