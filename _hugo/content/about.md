@@ -9,4 +9,3 @@ I'm a software engineer with a focus on secure messaging, Android development, a
 
 - [GitHub](https://github.com/afanasev)
 - [LinkedIn](https://www.linkedin.com/in/afanasev/)
-- [Mentoring](https://adplist.org/mentors/anatolii-afanasev)
