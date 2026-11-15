@@ -32,7 +32,7 @@ theme = "PaperMod"
   ShowCodeCopyButtons = true
   ShowPostNavLinks = true
   ShowBreadCrumbs = false
-  comments = true
+  comments = false  # Disqus disabled; set to true to re-enable (config + partial kept)
   mainSections = ["posts"]
 
   [params.homeInfoParams]
